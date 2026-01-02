@@ -1,0 +1,14 @@
+.code-editor {
+  font-family: 'Consolas', 'Monaco', monospace;
+  line-height: 1.5;
+}
+.active {
+  background-color: #1E1E1E;
+  border-bottom: 2px solid #007ACC;
+}
+
+.code-editor,
+.code-editor .CodeMirror {
+  height: 100%;
+  width: 100%;
+}
