@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vnc-test
+  namespace: webide-net
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vnc-test
+  template:
+    metadata:
+      labels:
+        app: vnc-test
+    spec:
+      containers:
+        - name: vnc
+          image: jaewoo6257/vnc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6080   # noVNC (보통)
+            - containerPort: 5900   # VNC (보통)
