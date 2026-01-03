@@ -1,8 +1,13 @@
+import { useRef } from "react";
 import Editor from "../components/ide/Editor";
 import Header from "../components/ide/Header";
 import Sidebar from "../components/ide/Slidebar";
+import Terminal from "../components/ide/Terminal";
 
 export default function IdePage(){
+
+  const terminalRef = useRef(null);
+
     return (
     <div className="flex flex-col h-screen bg-[#252526]">
       <Header />
@@ -20,7 +25,7 @@ export default function IdePage(){
           <div className="h-1 bg-[#333] cursor-row-resize" />
 
           <div className="h-[200px] overflow-hidden">
-            <p className="text-white p-2">터미널 창</p>
+            <Terminal terminalRef={terminalRef}/>
           </div>
         </div>
         

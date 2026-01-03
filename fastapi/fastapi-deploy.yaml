@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ide-fastapi
+  labels:
+    app: ide-fastapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ide-fastapi
+  template:
+    metadata:
+      labels:
+        app: ide-fastapi
+    spec:
+      containers:
+        - name: ide-fastapi
+          image: jaewoo6257/ide-demo-fastapi:echo
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
