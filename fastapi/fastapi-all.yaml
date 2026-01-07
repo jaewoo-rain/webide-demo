@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ide-fastapi-sa
+  namespace: webide-net
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ide-fastapi-exec-role
+  namespace: webide-net
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ide-fastapi-exec-rb
+  namespace: webide-net
+subjects:
+  - kind: ServiceAccount
+    name: ide-fastapi-sa
+    namespace: webide-net
+roleRef:
+  kind: Role
+  name: ide-fastapi-exec-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ide-fastapi
+  namespace: webide-net
+  labels:
+    app: ide-fastapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ide-fastapi
+  template:
+    metadata:
+      labels:
+        app: ide-fastapi
+    spec:
+      serviceAccountName: ide-fastapi-sa
+      containers:
+        - name: ide-fastapi
+          image: jaewoo6257/ide-demo-fastapi:echo
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ide-fastapi-svc
+  namespace: webide-net
+spec:
+  selector:
+    app: ide-fastapi
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080
+  type: NodePort

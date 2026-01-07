@@ -9,3 +9,7 @@ kubectl apply -f fastapi-svc.yaml
 kubectl get pods
 kubectl get svc
 kubectl logs -l app=ide-fastapi -f
+
+재시작
+kubectl rollout restart deployment/ide-fastapi -n webide-net
+

@@ -71,18 +71,18 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { useTerminalWs } from "../../hooks/useTerminalWs";
 
-export default function Terminal({terminalRef}){
+export default function Terminal({ terminalRef }) {
     const termInstanceRef = useRef(null);
     const fitAddonRef = useRef(null);
     const [termReady, setTermReady] = useState(false);
     // 1) xterm mount
-    useEffect(()=>{
-        if(!terminalRef?.current) return;
+    useEffect(() => {
+        if (!terminalRef?.current) return;
 
         // xterm 인스턴스 생성
         const term = new XTerm({
             cursorBlink: true,
-            fontSize:13,
+            fontSize: 13,
             convertEol: true,
             scrollback: 5000,
         });
@@ -98,15 +98,14 @@ export default function Terminal({terminalRef}){
         // 텍스트 출력
         term.writeln("✅ xterm mounted");
 
-        setTermReady(true);
-
         // 저장
         termInstanceRef.current = term;
         fitAddonRef.current = fitAddon;
+        setTermReady(true);
 
         // 정리
-        return () =>{
-            try { term.dispose(); } catch {}
+        return () => {
+            try { term.dispose(); } catch { }
             termInstanceRef.current = null;
             fitAddonRef.current = null;
             setTermReady(false);
@@ -118,7 +117,7 @@ export default function Terminal({terminalRef}){
     // const wsUrl = "ws://localhost:8000/ws/terminal";
     const wsUrl = "ws://localhost:30080/ws/terminal";
 
-    const {status} = useTerminalWs({
+    const { status } = useTerminalWs({
         term: termReady ? termInstanceRef.current : null,
         wsUrl,
         enabled: true,
@@ -127,7 +126,7 @@ export default function Terminal({terminalRef}){
     const isClick = 0;
 
 
-    return(
+    return (
         <div id="terminal" className="h-full w-full bg-black flex flex-col">
             {/* 상단 탭바 */}
             <div className="flex bg-[#2D2D2D] text-sm border-b border-[#333] shrink-0">

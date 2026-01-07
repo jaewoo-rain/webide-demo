@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: vnc
-          image: jaewoo6257/vnc:latest
+          image: jaewoo6257/vnc:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 6080   # noVNC (보통)
-            - containerPort: 5900   # VNC (보통)
+            - containerPort: 6080 # noVNC (보통)
+            - containerPort: 5900 # VNC (보통)
