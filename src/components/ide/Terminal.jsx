@@ -1,69 +1,3 @@
-// // 테스트 코드
-
-// import { useEffect, useRef } from "react";
-// import { Terminal as XTerm } from "xterm";
-// import { FitAddon } from "xterm-addon-fit";
-// import "xterm/css/xterm.css";
-
-// export default function Terminal({ terminalRef }) {
-//   const termInstanceRef = useRef(null);
-//   const fitAddonRef = useRef(null);
-
-//   useEffect(() => {
-//     if (!terminalRef?.current) return;
-
-//     // 1) xterm 인스턴스 생성
-//     const term = new XTerm({
-//       cursorBlink: true,
-//       fontSize: 13,
-//       convertEol: true,
-//       scrollback: 5000,
-//     });
-
-//     // 2) fit addon
-//     const fitAddon = new FitAddon();
-//     term.loadAddon(fitAddon);
-
-//     // 3) 화면에 붙이기
-//     term.open(terminalRef.current);
-//     fitAddon.fit();
-
-//     // 테스트 출력
-//     term.writeln("✅ xterm mounted!");
-//     term.writeln("여기까지 보이면 화면 렌더링 성공");
-
-//     // 저장
-//     termInstanceRef.current = term;
-//     fitAddonRef.current = fitAddon;
-
-//     // 4) 정리
-//     return () => {
-//       term.dispose();
-//       termInstanceRef.current = null;
-//       fitAddonRef.current = null;
-//     };
-//   }, [terminalRef]);
-
-//   const isClick = 0;
-
-//   return (
-//     <div className="h-full w-full bg-black flex flex-col">
-//       <div className="flex bg-[#2D2D2D] text-sm border-b border-[#333] shrink-0">
-//         <div className={`px-3 py-1 border-r border-[#333] ${isClick === 0 ? "bg-[#1E1E1E]" : ""}`}>
-//           <span className="text-white">터미널</span>
-//         </div>
-//         <div className="flex-1" />
-//       </div>
-
-//       <div
-//         ref={terminalRef}
-//         className="flex-1 min-h-0 w-full overflow-hidden"
-//         style={{ background: "#000", paddingLeft: 15 }}
-//       />
-//     </div>
-//   );
-// }
-
 
 import { useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "xterm";
@@ -115,7 +49,7 @@ export default function Terminal({ terminalRef }) {
     // const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
     // const wsUrl = `${protocol}${window.location.host}/fastapi/ws/terminal`;
     // const wsUrl = "ws://localhost:8000/ws/terminal";
-    const wsUrl = "ws://localhost:30080/ws/terminal";
+    const wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
 
     const { status } = useTerminalWs({
         term: termReady ? termInstanceRef.current : null,
