@@ -1,34 +1,34 @@
 import axios from "axios"
+import config from "../../config";
+import { useSelector } from "react-redux";
 
 export default function Header() {
 
+    const code = useSelector((s) => s.project.code);
     const runCode = async () => {
         // e.preventDefault();
-        console.log("실행버튼 클릭")
+        console.log(`실행버튼 클릭 :${code}`)
+
         try {
             const res = await axios.post(
-                `210.117.181.53:30080/run`,
+                `http://${config.fastapiUrl}/run`,
                 {
-                    code: 'print("ss")',
-                    pod_name: "vnc-test",
+                    code: code, pod_name: "vnc-test",
                 }, {
                 headers: { "Content-Type": "application/json" },
             }
             );
 
-            if (!res.ok) {
-                const errData = await res.json();
-                console.error("RUN failed:", res.status, errData);
-                alert(`실행 실패 (${res.status})`);
-                return;
-            }
-
-            const data = await res.json();
-            console.log(data)
-
+            // console.log("RUN success:", res.status, res.data);
 
         } catch (e) {
-            console.log(`에러발생 ${e}`)
+            if (e.response) {
+                console.error("RUN failed:", e.response.status, e.response.data);
+                alert(`실행 실패 (${e.response.status})`);
+            } else {
+                console.error("Network/Error:", e.message);
+                alert(`네트워크 오류: ${e.message}`);
+            }
         }
     }
 

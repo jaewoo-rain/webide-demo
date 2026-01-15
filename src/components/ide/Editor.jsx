@@ -17,21 +17,25 @@ import "codemirror/addon/fold/comment-fold";
 import "codemirror/addon/fold/indent-fold";
 import "codemirror/addon/fold/foldgutter.css";
 
-export default function Editor(){
+import { useDispatch } from "react-redux";
+import { setCode } from "../../store/projectSlice";
+
+export default function Editor() {
+    const dispatch = useDispatch();
 
     const textareaRef = useRef(null);
     const editorRef = useRef(null);
 
-    function onClickTab(page){
+    function onClickTab(page) {
         console.log(`${page}탭 클릭`);
     }
 
-    function onCloseTab(page){
+    function onCloseTab(page) {
         console.log(`${page}탭 닫음`);
 
     }
 
-    function addTab(){
+    function addTab() {
         console.log("페이지 추가 탭 클릭")
     }
     function saveCode() {
@@ -47,13 +51,13 @@ export default function Editor(){
 
         // 여기서 API 호출!
         // fetch("/api/save", { method: "POST", body: JSON.stringify({ code }) })
-        }
+    }
 
 
-    useEffect(()=>{
-        if(editorRef.current) return;
+    useEffect(() => {
+        if (editorRef.current) return;
 
-        editorRef.current = CodeMirror.fromTextArea(textareaRef.current,{
+        editorRef.current = CodeMirror.fromTextArea(textareaRef.current, {
             value: "코드미러 시작",
             mode: "python",
             theme: "darcula",
@@ -72,72 +76,78 @@ export default function Editor(){
         // Ctrl+S 저장 코드
         editorRef.current.on("keydown", (cm, e) => {
             const isSave = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s";
-            
+
             // IME 조합 중이면 저장 타이밍 꼬일 수 있어서 방지
             if (e.isComposing) return;
 
             if (isSave) {
                 e.preventDefault(); // 브라우저 기본 저장 막기
-                saveCode(); 
+                saveCode();
             }
         });
-    },[])
 
-    return(
+        editorRef.current.on("change", (instance) => {
+            const code = instance.getValue();
+            dispatch(setCode(code));
+        });
+
+    }, [])
+
+    return (
         <>
-         <div className="bg-[#2D2D2D] flex text-sm">
-            <div key={1}
-            onClick={()=>{
-                    onClickTab(1);
-                }}
-            className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer active"
-            >
-                <div className="w-4 h-4 flex items-center justify-center mr-1">
-                    <i className="ri-file-code-line text-[#519ABA]"/>
+            <div className="bg-[#2D2D2D] flex text-sm">
+                <div key={1}
+                    onClick={() => {
+                        onClickTab(1);
+                    }}
+                    className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer active"
+                >
+                    <div className="w-4 h-4 flex items-center justify-center mr-1">
+                        <i className="ri-file-code-line text-[#519ABA]" />
+                    </div>
+                    <span>파일1</span>
+                    <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCloseTab(1);
+                        }}>
+                        <i className="ri-close-line" />
+                    </button>
                 </div>
-                <span>파일1</span>
-                <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-                onClick={(e)=>{
-                    e.stopPropagation();
-                    onCloseTab(1);
-                }}>
-                    <i className="ri-close-line"/>
-                </button>
-            </div>
 
-            <div key={2}
-            onClick={()=>{
-                    onClickTab(2);
-                }}
-            className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer"
-            >
-                <div className="w-4 h-4 flex items-center justify-center mr-1">
-                    <i className="ri-file-code-line text-[#519ABA]"/>
+                <div key={2}
+                    onClick={() => {
+                        onClickTab(2);
+                    }}
+                    className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer"
+                >
+                    <div className="w-4 h-4 flex items-center justify-center mr-1">
+                        <i className="ri-file-code-line text-[#519ABA]" />
+                    </div>
+                    <span>파일2</span>
+                    <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCloseTab(2);
+                        }}>
+                        <i className="ri-close-line" />
+                    </button>
                 </div>
-                <span>파일2</span>
-                <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-                onClick={(e)=>{
-                    e.stopPropagation();
-                    onCloseTab(2);
-                }}>
-                    <i className="ri-close-line"/>
+
+                {/* 페이지 추가 버튼 */}
+                <button className="px-3 py-2 flex items-center"
+                    onClick={() => {
+                        addTab();
+                    }}
+                >
+                    <i className="ri-add-line" />
                 </button>
+
             </div>
-
-            {/* 페이지 추가 버튼 */}
-            <button className="px-3 py-2 flex items-center"
-                onClick={()=>{
-                    addTab();
-                }}
-            >
-                <i className="ri-add-line"/>
-            </button>
-
-        </div>
             <div className="flex-1 overflow-auto code-editor h-full w-full">
                 <div className="h-full w-full">
                     <textarea
-                    ref={textareaRef}
+                        ref={textareaRef}
                     />
                 </div>
             </div>

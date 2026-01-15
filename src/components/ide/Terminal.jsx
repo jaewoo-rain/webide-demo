@@ -4,11 +4,13 @@ import { Terminal as XTerm } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { useTerminalWs } from "../../hooks/useTerminalWs";
+import config from "../../config";
 
 export default function Terminal({ terminalRef }) {
     const termInstanceRef = useRef(null);
     const fitAddonRef = useRef(null);
     const [termReady, setTermReady] = useState(false);
+
     // 1) xterm mount
     useEffect(() => {
         if (!terminalRef?.current) return;
@@ -46,10 +48,8 @@ export default function Terminal({ terminalRef }) {
         };
     }, [terminalRef]);
 
-    // const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    // const wsUrl = `${protocol}${window.location.host}/fastapi/ws/terminal`;
-    // const wsUrl = "ws://localhost:8000/ws/terminal";
-    const wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
+    let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
+    wsUrl = `ws://${config.fastapiUrl}/ws/terminal?pod_name=vnc-test`;
 
     const { status } = useTerminalWs({
         term: termReady ? termInstanceRef.current : null,
@@ -88,6 +88,7 @@ export default function Terminal({ terminalRef }) {
                     paddingLeft: 15,
                     paddingTop: 2,
                 }}
+
             />
         </div>
     )
