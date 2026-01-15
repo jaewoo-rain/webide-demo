@@ -97,7 +97,12 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
             '{venv_path}/bin/python3' -m pip install --upgrade pip
         fi
         """
-        exec_run(pod_name, ["bash","-lc", ensure_venv])
+        await exec_run(pod_name, ["bash","-lc", ensure_venv])
+
+        # cmd = f"""
+        # source {venv_path}/bin/activate >/dev/null 2>&1 || true
+        # exec bash -i
+        # """.strip()
 
 
         # tty=True면 bash가 “터미널처럼” 동작
@@ -106,11 +111,13 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
             v1.connect_get_namespaced_pod_exec,
             name=pod_name,
             namespace=NAMESPACE,
-            command=["/bin/bash"],
+            command=["bash"],
             stderr=True, stdin=True, stdout=True, tty=True, 
             _preload_content=False, 
             container=CONTAINER_NAME
         )
+
+        resp.write_stdin("source /tmp/user_venv/bin/activate")
 
         SESSION[pod_name] = resp
 
