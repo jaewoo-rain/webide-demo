@@ -1,19 +1,22 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from kubernetes import client, config
 from kubernetes.stream import stream
 from utils.util_exec_run import exec_run
+from utils.util_create_file import create_file
 from response.run_response import RunResponse
 from request.run_request import RunRequest
 import os
 from fastapi import Query
-from typing import Optional
+from typing import Optional, Dict
+import time
 
 app = FastAPI()
 
 NAMESPACE = "webide-net"
 # POD_NAME  = "vnc-test" # 일단 하나 고정
 CONTAINER_NAME = None # pod에 컨테이너가 1개면 None, 여러 개면 이름 지정
+SESSION : Dict = {}
 
 @app.on_event("startup")
 def _startup():
@@ -27,10 +30,35 @@ def _startup():
 # 실행
 @app.post("/run", response_model=RunResponse)
 async def run(req: RunRequest):
-    out = await exec_run(req.pod_name, ["ls", "-al"])
-    return {"output": out}
+    WORKSPACE = "/opt/workspace"
+    try:
+        # 터미널 연결 시험
+        resp = SESSION.get(req.pod_name)
+        if not resp or not resp.is_open():
+             raise HTTPException(400, detail="터미널 연결 안됨.")
+    
+        # out = await exec_run(req.pod_name, ["ls", "-al"])
+        # 파일 만들기
+        exec_path = await create_file(req.pod_name, req.code,file_name="main.py", base_path=WORKSPACE)
 
-# 만들기
+        # 파일 실행하기
+        await exec_run(req.pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
+        resp.write_stdin(f"/bin/python '{exec_path}'\n")
+
+        # cli, gui 구분하기
+        for _ in range(5):
+            check = await exec_run(req.pod_name, ["bash", "-c", "DISPLAY=:1 xwininfo -root -tree | grep -E '\"[^ ]+\"' && echo yes || echo no"])
+            if "yes" in check: return {"mode": "gui"}
+            await asyncio.sleep(0.2)
+        return {"mode": "cli"}
+    
+    except Exception as e: 
+        raise HTTPException(500, detail=str(e))
+ 
+
+    
+
+    
 
 # 삭제
 
@@ -62,6 +90,8 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
             _preload_content=False, 
             container=CONTAINER_NAME
         )
+
+        SESSION[pod_name] = resp
 
         # 가능한 것 들
         # resp.write_stdin("ls\n")     # bash에 타이핑
@@ -107,10 +137,11 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
         try:
             await websocket.send_text(f"\r\n❌ server error: {e}\r\n")
         except Exception:
-            pass
+            raise HTTPException(500, detail=f"[WS MAIN ERROR] {e}")
     finally:
         try:
             if resp:
                 resp.close()
+                SESSION.pop(pod_name, None)
         except Exception:
             pass
