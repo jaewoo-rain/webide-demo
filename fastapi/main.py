@@ -52,7 +52,7 @@ async def run(req: RunRequest):
 
         # 파일 실행하기
         await exec_run(req.pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
-        resp.write_stdin(f"/bin/python '{exec_path}'\n")
+        resp.write_stdin(f"/bin/python3 '{exec_path}'\n")
 
         # cli, gui 구분하기
         for _ in range(5):
