@@ -47,7 +47,6 @@ async def run(req: RunRequest):
         if not resp or not resp.is_open():
              raise HTTPException(400, detail="터미널 연결 안됨.")
     
-        # out = await exec_run(req.pod_name, ["ls", "-al"])
         # 파일 만들기
         exec_path = await create_file(req.pod_name, req.code,file_name="main.py", base_path=WORKSPACE)
 
@@ -89,6 +88,18 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
 
     resp = None
     try:
+        venv_path = "/tmp/user_venv" 
+        # venv 설정
+        ensure_venv = f"""
+        set -e
+        if [ ! -x '{venv_path}/bin/python3' ]; then
+            python3 -m venv '{venv_path}'
+            '{venv_path}/bin/python3' -m pip install --upgrade pip
+        fi
+        """
+        exec_run(pod_name, ["bash","-lc", ensure_venv])
+
+
         # tty=True면 bash가 “터미널처럼” 동작
         # _preload_content 안끊기기 위해서 중요함 True인 경우 일회용임 
         resp = stream(
