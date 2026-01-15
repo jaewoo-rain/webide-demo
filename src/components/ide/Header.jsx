@@ -1,21 +1,21 @@
 import axios from "axios"
 import config from "../../config";
 
-export default function Header(){
-    api = config.server
+export default function Header() {
+    // api = config.server
 
-    const runCode = async(e) => {
+    const runCode = async (e) => {
         e.preventDefault();
         console.log("실행버튼 클릭")
-        try{
+        try {
             res = await axios.post(
-                `${api}/fastapi/run`,
+                `/fastapi/run`,
                 {
-                    code:'print("ss")',
-                    pod_name:"vnc-test",
-                },{
-                    headers: { "Content-Type": "application/json" },
-                }
+                    code: 'print("ss")',
+                    pod_name: "vnc-test",
+                }, {
+                headers: { "Content-Type": "application/json" },
+            }
             );
 
             if (!res.ok) {
@@ -29,20 +29,20 @@ export default function Header(){
             console.log(data)
 
 
-        }catch(e){
+        } catch (e) {
             console.log(`에러발생 ${e}`)
         }
     }
 
-    function onSave(){
+    function onSave() {
         console.log("저장버튼 클릭")
     }
 
-    function onBack(){
+    function onBack() {
         console.log("목록으로 이동")
     }
 
-    return(
+    return (
         <header className="bg-[#252526] h-12 flex items-center px-4 border-b border-[#333]">
 
             {/* 이름 */}
@@ -63,26 +63,26 @@ export default function Header(){
 
             {/* 실행/저장버튼 */}
             <div className="flex items-center space-x-2 shrink-0">
-                <button 
-                onClick={()=>{runCode()}}
-                disabled={false}
-                className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
+                <button
+                    onClick={() => { runCode() }}
+                    disabled={false}
+                    className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
                 >
                     <span>실행</span>
                 </button>
 
-                <button 
-                disabled={false}
-                onClick={()=>{onSave()}}
-                className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
+                <button
+                    disabled={false}
+                    onClick={() => { onSave() }}
+                    className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
                 >
                     <span>저장</span>
                 </button>
 
-                <button 
-                onClick={()=>{onBack()}}
-                disabled={true}
-                className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
+                <button
+                    onClick={() => { onBack() }}
+                    disabled={true}
+                    className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
                 >
                     <span>목록으로</span>
                 </button>

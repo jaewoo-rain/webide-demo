@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vnc-test
+  namespace: webide-net
+spec:
+  containers:
+    - name: vnc
+      image: jaewoo6257/vnc:1.0.0
+      imagePullPolicy: IfNotPresent
