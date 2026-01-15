@@ -1,7 +1,37 @@
-export default function Header(){
+import axios from "axios"
+import config from "../../config";
 
-    function runCode(){
+export default function Header(){
+    api = config.server
+
+    const runCode = async(e) => {
+        e.preventDefault();
         console.log("실행버튼 클릭")
+        try{
+            res = await axios.post(
+                `${api}/fastapi/run`,
+                {
+                    code:'print("ss")',
+                    pod_name:"vnc-test",
+                },{
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
+
+            if (!res.ok) {
+                const errData = await res.json();
+                console.error("RUN failed:", res.status, errData);
+                alert(`실행 실패 (${res.status})`);
+                return;
+            }
+
+            const data = await res.json();
+            console.log(data)
+
+
+        }catch(e){
+            console.log(`에러발생 ${e}`)
+        }
     }
 
     function onSave(){
