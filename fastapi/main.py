@@ -2,6 +2,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from kubernetes import client, config
 from kubernetes.stream import stream
+from fastapi.middleware.cors import CORSMiddleware
 from utils.util_exec_run import exec_run
 from utils.util_create_file import create_file
 from response.run_response import RunResponse
