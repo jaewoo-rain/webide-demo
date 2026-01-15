@@ -4,12 +4,12 @@ import config from "../../config";
 export default function Header() {
     // api = config.server
 
-    const runCode = async (e) => {
-        e.preventDefault();
+    const runCode = async () => {
+        // e.preventDefault();
         console.log("실행버튼 클릭")
         try {
-            res = await axios.post(
-                `/fastapi/run`,
+            const res = await axios.post(
+                `http://localhost:30080/run`,
                 {
                     code: 'print("ss")',
                     pod_name: "vnc-test",

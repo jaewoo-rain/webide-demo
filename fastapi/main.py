@@ -13,6 +13,15 @@ import time
 
 app = FastAPI()
 
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 NAMESPACE = "webide-net"
 # POD_NAME  = "vnc-test" # 일단 하나 고정
 CONTAINER_NAME = None # pod에 컨테이너가 1개면 None, 여러 개면 이름 지정
