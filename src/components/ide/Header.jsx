@@ -1,15 +1,13 @@
 import axios from "axios"
-import config from "../../config";
 
 export default function Header() {
-    // api = config.server
 
     const runCode = async () => {
         // e.preventDefault();
         console.log("실행버튼 클릭")
         try {
             const res = await axios.post(
-                `http://localhost:30080/run`,
+                `210.117.181.53:30080/run`,
                 {
                     code: 'print("ss")',
                     pod_name: "vnc-test",
