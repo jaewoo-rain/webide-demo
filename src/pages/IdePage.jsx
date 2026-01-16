@@ -1,14 +1,20 @@
+import { useState } from "react";
 import Editor from "../components/ide/Editor";
 import Header from "../components/ide/Header";
 import Sidebar from "../components/ide/Slidebar";
 import Terminal from "../components/ide/Terminal";
+import { GuiModal } from "../components/ide/GuiModal";
 
 export default function IdePage() {
 
+  const [runMode, setRunMode] = useState("cli")
 
   return (
     <div className="flex flex-col h-screen bg-[#252526]">
-      <Header />
+      {runMode == "gui" && (
+        <GuiModal onClose={() => setRunMode("cli")} />
+      )}
+      <Header setRunMode={setRunMode} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="w-64 shrink-0">
@@ -26,6 +32,7 @@ export default function IdePage() {
             <Terminal />
           </div>
         </div>
+
 
       </div>
     </div>

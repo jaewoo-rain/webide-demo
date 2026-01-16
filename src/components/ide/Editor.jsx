@@ -86,9 +86,12 @@ export default function Editor() {
             }
         });
 
+        // 코드 변경 감지
         editorRef.current.on("change", (instance) => {
             const code = instance.getValue();
             dispatch(setCode(code));
+            // 변경될때마다 로컬 스토리지에 유저-프로젝트이름:코드 이런식으로
+            // 저장하는것도 괜찮을 듯
         });
 
     }, [])

@@ -2,12 +2,11 @@ import axios from "axios"
 import config from "../../config";
 import { useSelector } from "react-redux";
 
-export default function Header() {
+export default function Header({ setRunMode }) {
 
     const code = useSelector((s) => s.project.code);
     const runCode = async () => {
         // e.preventDefault();
-        console.log(`실행버튼 클릭 :${code}`)
 
         try {
             const res = await axios.post(
@@ -19,7 +18,8 @@ export default function Header() {
             }
             );
 
-            // console.log("RUN success:", res.status, res.data);
+            console.log("RUN success:", res.data.mode);
+            setRunMode(res.data.mode)
 
         } catch (e) {
             if (e.response) {
