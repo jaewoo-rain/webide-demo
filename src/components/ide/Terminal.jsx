@@ -5,51 +5,19 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { useTerminalWs } from "../../hooks/useTerminalWs";
 import config from "../../config";
+import { useXtermMount } from "../../hooks/useXtermMount";
 
-export default function Terminal({ terminalRef }) {
+export default function Terminal({ }) {
     const termInstanceRef = useRef(null);
-    const fitAddonRef = useRef(null);
-    const [termReady, setTermReady] = useState(false);
-
-    // 1) xterm mount
-    useEffect(() => {
-        if (!terminalRef?.current) return;
-
-        // xterm 인스턴스 생성
-        const term = new XTerm({
-            cursorBlink: true,
-            fontSize: 13,
-            convertEol: true,
-            scrollback: 5000,
-        });
-
-        // fit addon
-        const fitAddon = new FitAddon();
-        term.loadAddon(fitAddon);
-
-        // 화면에 붙이기
-        term.open(terminalRef.current);
-        fitAddon.fit();
-
-        // 텍스트 출력
-        term.writeln("✅ xterm mounted");
-
-        // 저장
-        termInstanceRef.current = term;
-        fitAddonRef.current = fitAddon;
-        setTermReady(true);
-
-        // 정리
-        return () => {
-            try { term.dispose(); } catch { }
-            termInstanceRef.current = null;
-            fitAddonRef.current = null;
-            setTermReady(false);
-        };
-    }, [terminalRef]);
+    // const fitAddonRef = useRef(null);
+    const terminalRef = useRef(null);
+    // const [termReady, setTermReady] = useState(false);
 
     let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
     wsUrl = `ws://${config.fastapiUrl}/ws/terminal?pod_name=vnc-test`;
+
+    let termReady = useXtermMount({ terminalRef, termInstanceRef })
+
 
     const { status } = useTerminalWs({
         term: termReady ? termInstanceRef.current : null,

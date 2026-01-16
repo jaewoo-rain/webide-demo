@@ -1,14 +1,12 @@
-import { useRef } from "react";
 import Editor from "../components/ide/Editor";
 import Header from "../components/ide/Header";
 import Sidebar from "../components/ide/Slidebar";
 import Terminal from "../components/ide/Terminal";
 
-export default function IdePage(){
+export default function IdePage() {
 
-  const terminalRef = useRef(null);
 
-    return (
+  return (
     <div className="flex flex-col h-screen bg-[#252526]">
       <Header />
 
@@ -20,15 +18,15 @@ export default function IdePage(){
         <div className="w-1 bg-[#333] cursor-col-resize" />
 
         <div className="flex-1 flex flex-col min-h-0">
-          <Editor/>
+          <Editor />
           {/* resize 바 */}
           <div className="h-1 bg-[#333] cursor-row-resize" />
 
           <div className="h-[200px] overflow-hidden">
-            <Terminal terminalRef={terminalRef}/>
+            <Terminal />
           </div>
         </div>
-        
+
       </div>
     </div>
   );
