@@ -4,13 +4,20 @@ import { createSlice } from "@reduxjs/toolkit";
 let projectSlice = createSlice({
   name: "project",
   initialState: {
-    code: ""
+    code: "",
+    podName: "vnc-test",
+    VNCSrc: "http://210.117.181.56:30681/vnc.html?autoconnect=true&password=jaewoo"
   },
   reducers: {
     setCode(state, action) {
       const code = action.payload;
       state.code = code;
     },
+    initProject(state, action) {
+      const { podName, noVNCPort } = action.payload
+      state.podName = podName
+      state.noVNCPort = noVNCPort
+    }
   }
 })
 

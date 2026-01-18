@@ -1,36 +1,13 @@
-import axios from "axios"
-import config from "../../config";
 import { useSelector } from "react-redux";
+import { runCodeApi } from "../../service/runService";
 
 export default function Header({ setRunMode }) {
 
     const code = useSelector((s) => s.project.code);
     const runCode = async () => {
-        // e.preventDefault();
-
-        try {
-            const res = await axios.post(
-                `http://${config.fastapiUrl}/run`,
-                {
-                    code: code, pod_name: "vnc-test",
-                }, {
-                headers: { "Content-Type": "application/json" },
-            }
-            );
-
-            console.log("RUN success:", res.data.mode);
-            setRunMode(res.data.mode)
-
-        } catch (e) {
-            if (e.response) {
-                console.error("RUN failed:", e.response.status, e.response.data);
-                alert(`실행 실패 (${e.response.status})`);
-            } else {
-                console.error("Network/Error:", e.message);
-                alert(`네트워크 오류: ${e.message}`);
-            }
-        }
+        await runCodeApi({ code, setRunMode })
     }
+
 
     function onSave() {
         console.log("저장버튼 클릭")
