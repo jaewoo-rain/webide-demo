@@ -11,6 +11,7 @@ import os
 from fastapi import Query
 from typing import Optional, Dict
 import time
+from starlette.websockets import WebSocketState
 
 app = FastAPI()
 
@@ -133,6 +134,9 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
         async def pod_to_ws():
             try:
                 while resp.is_open():
+                    # 이미 WS 닫혔으면 더 보내지 말고 종료
+                    if websocket.client_state != WebSocketState.CONNECTED:
+                        break
                     # stdout
                     if resp.peek_stdout():
                         data = resp.read_stdout()
