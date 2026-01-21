@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webide-react
+  namespace: webide-net
+  labels:
+    app: webide-react
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webide-react
+  template:
+    metadata:
+      labels:
+        app: webide-react
+    spec:
+      containers:
+        - name: webide-react
+          image: jaewoo6257/webide-react:1.0.6
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webide-react-svc
+  namespace: webide-net
+spec:
+  type: ClusterIP
+  selector:
+    app: webide-react
+  ports:
+    - port: 80
+      targetPort: 80
