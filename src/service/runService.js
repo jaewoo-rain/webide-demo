@@ -7,7 +7,7 @@ export async function runCodeApi({ code, setRunMode, podName = "vnc-test" }) {
 
     try {
         const res = await axios.post(
-            `http://${config.fastapiUrl}/run`,
+            `${config.fastapiUrl}/run`,
             {
                 code: code, pod_name: "vnc-test",
             }, {

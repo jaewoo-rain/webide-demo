@@ -1,5 +1,5 @@
 const config = {
-  fastapiUrl: "210.117.181.56:30080",
+  fastapiUrl: "/fastapi",
   springUrl: "api",
 };
 

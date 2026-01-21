@@ -135,6 +135,7 @@ async def create_container(req: CreateContainerRequest):
         pvc_name=pvc_name,
     )
 
+# 삭제
 @app.delete("/containers", response_model=DeleteContainerResponse)
 async def delete_container(req: DeleteContainerRequest):
     v1 = client.CoreV1Api()
@@ -159,8 +160,6 @@ async def delete_container(req: DeleteContainerRequest):
         svc_name=svc_name,
         pvc_name=pvc_name
     )
-
-# 삭제
 
 # 이름 수정
 
@@ -189,12 +188,6 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
         fi
         """
         await exec_run(pod_name, ["bash","-lc", ensure_venv])
-
-        # cmd = f"""
-        # source {venv_path}/bin/activate >/dev/null 2>&1 || true
-        # exec bash -i
-        # """.strip()
-
 
         # tty=True면 bash가 “터미널처럼” 동작
         # _preload_content 안끊기기 위해서 중요함 True인 경우 일회용임 

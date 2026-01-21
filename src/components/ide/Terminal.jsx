@@ -13,8 +13,9 @@ export default function Terminal({ }) {
     const terminalRef = useRef(null);
     // const [termReady, setTermReady] = useState(false);
 
-    let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
-    wsUrl = `ws://${config.fastapiUrl}/ws/terminal?pod_name=novnc-test-user-test-project-6fd896b6d5-jh4bf `;
+    // let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
+    // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
+    const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
 
     let termReady = useXtermMount({ terminalRef, termInstanceRef })
 

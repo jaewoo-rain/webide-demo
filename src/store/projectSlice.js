@@ -17,11 +17,15 @@ let projectSlice = createSlice({
       const { podName, noVNCPort } = action.payload
       state.podName = podName
       state.noVNCPort = noVNCPort
+    },
+    setVncPort(state, action) {
+      const port = action.payload;
+      state.VNCSrc = `http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo`
     }
   }
 })
 
-export const { setCode } = projectSlice.actions;
+export const { setCode, setVncPort } = projectSlice.actions;
 export default projectSlice.reducer;
 
 /**
