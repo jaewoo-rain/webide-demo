@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webide-fastapi-ing
+  namespace: webide-net
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+    # WebSocket/긴 연결
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /fastapi(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ide-fastapi-svc
+                port:
+                  number: 8000
