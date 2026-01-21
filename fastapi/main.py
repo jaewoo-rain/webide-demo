@@ -1,6 +1,17 @@
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from kubernetes import client, config
+from kubernetes.client import (
+    V1Pod,
+    V1ObjectMeta,
+    V1PodSpec,
+    V1Container,
+    V1Service,
+    V1ServiceSpec,
+    V1ServicePort,
+    V1ContainerPort,
+    V1EnvVar,
+)
 from kubernetes.stream import stream
 from fastapi.middleware.cors import CORSMiddleware
 from utils.util_exec_run import exec_run
@@ -12,6 +23,13 @@ from fastapi import Query
 from typing import Optional, Dict
 import time
 from starlette.websockets import WebSocketState
+from response.create_container_response import CreateContainerResponse
+from request.create_container_request import CreateContainerRequest
+from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PORTS, VNC_APP_LABEL, NAMESPACE)
+from kubernetes.client.rest import ApiException
+from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name)
+from request.delete_container_request import DeleteContainerRequest
+from response.delete_container_response import DeleteContainerResponse
 
 app = FastAPI()
 
@@ -24,7 +42,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-NAMESPACE = "webide-net"
 # POD_NAME  = "vnc-test" # 일단 하나 고정
 CONTAINER_NAME = None # pod에 컨테이너가 1개면 None, 여러 개면 이름 지정
 SESSION : Dict = {}
@@ -64,11 +81,84 @@ async def run(req: RunRequest):
     
     except Exception as e: 
         raise HTTPException(500, detail=str(e))
- 
 
-    
+# 생성
+# kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+@app.post("/containers", response_model=CreateContainerResponse)
+async def create_container(req: CreateContainerRequest):
 
-    
+    image = req.image or "jaewoo6257/vnc:1.0.0"
+    env = dict(CONTAINER_ENV_DEFAULT)
+
+    # 쿠버네티스의 가장 기본 리소스들
+    # Pod, Service, ConfigMap, Secret, Namespace, Node, PVC, Event
+    v1 = client.CoreV1Api()
+
+    # 애플리케이션 실행/관리용 리소스
+    # Deployment, StatefulSet, DaemonSet, ReplicaSet
+    apps = client.AppsV1Api()
+
+    owner = slug(req.user_name)
+    project = slug(req.project_name)
+
+    # 밑에 모두 중복 안돼, 장애 발생시 파드가 생성되므로 deploy는 하나만 생성됨
+    key = f"{owner}-{project}"
+    deploy_name = f"novnc-{key}"
+    pvc_name = f"{deploy_name}-pvc"
+    svc_name = f"{deploy_name}-svc"
+
+    labels = {
+        "app": "novnc",
+        "owner": owner,
+        "project": project,
+        "key": key, # selector가 이거 보고 pod 찾아감
+    }
+
+    # 1. PVC 만들기
+    create_pvc(v1, NAMESPACE, pvc_name, labels)
+
+    # 2. Deployment 만들기 (replicas=1)
+    create_deployment(apps, NAMESPACE, deploy_name, labels, image, env, pvc_name)
+
+    # 3. Service 만들기 (이미 존재하면 재사용, 없으면 포트 스캔 생성)
+    novnc_port = create_service_nodeport(v1, NAMESPACE, svc_name, labels, ALLOWED_NOVNC_PORTS)
+
+    # pod_name 찾기
+    pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
+
+    return CreateContainerResponse(
+        pod_name=pod_name, # 현재 Pod 이름(재시작 시 바뀔 수 있음)
+        novnc_port=novnc_port,
+        namespace=NAMESPACE,
+        deploy_name=deploy_name,
+        svc_name=svc_name,
+        pvc_name=pvc_name,
+    )
+
+@app.delete("/containers", response_model=DeleteContainerResponse)
+async def delete_container(req: DeleteContainerRequest):
+    v1 = client.CoreV1Api()
+    apps = client.AppsV1Api()
+
+    key = f"{req.user_name}-{req.project_name}"
+    deploy_name = f"novnc-{key}"
+    svc_name = f"{deploy_name}-svc"
+    pvc_name = f"{deploy_name}-pvc"
+
+    # Service
+    v1.delete_namespaced_service(svc_name, NAMESPACE)
+
+    # Deployment
+    apps.delete_namespaced_deployment(deploy_name, NAMESPACE)
+
+    # PVC
+    v1.delete_namespaced_persistent_volume_claim(pvc_name, NAMESPACE)
+
+    return DeleteContainerResponse(
+        deploy_name=deploy_name,
+        svc_name=svc_name,
+        pvc_name=pvc_name
+    )
 
 # 삭제
 
