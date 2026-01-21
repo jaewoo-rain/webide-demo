@@ -15,7 +15,9 @@ export default function Terminal({ }) {
 
     // let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
     // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
-    const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
+
+    // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
+    const wsUrl = config.wsUrl + 'vnc-test';
 
     let termReady = useXtermMount({ terminalRef, termInstanceRef })
 
