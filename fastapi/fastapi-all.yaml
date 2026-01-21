@@ -12,20 +12,38 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: ide-fastapi-exec-role
+  name: ide-fastapi-role
   namespace: webide-net
 rules:
+  # Pods (조회용)
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
+
+  # Pods exec (터미널/exec 기능)
   - apiGroups: [""]
     resources: ["pods/exec"]
     verbs: ["get", "create"]
+
+  # Services
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+
+  # PVC
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+
+  # Deployments
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: ide-fastapi-exec-rb
+  name: ide-fastapi-rb
   namespace: webide-net
 subjects:
   - kind: ServiceAccount
@@ -33,7 +51,7 @@ subjects:
     namespace: webide-net
 roleRef:
   kind: Role
-  name: ide-fastapi-exec-role
+  name: ide-fastapi-role
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1

@@ -8,12 +8,3 @@ class CreateContainerResponse(BaseModel):
     deploy_name: str
     svc_name: str
     pvc_name: str
-    # id: str
-    # name: str
-    # image: str
-    # owner: str
-    # role: str
-    # limited_by_quota: bool
-    # projectName: str
-    # vnc_url: str
-    # ws_url: str
