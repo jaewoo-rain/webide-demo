@@ -1,21 +1,21 @@
 import axios from "axios";
 import config from "../config";
 
-export async function runCodeApi({ code, setRunMode, podName = "vnc-test" }) {
+export async function saveCodeApi({ code, file_name = "main.py", podName = "vnc-test" }) {
     // e.preventDefault();
 
     try {
         const res = await axios.post(
-            `${config.fastapiUrl}/run`,
+            `${config.fastapiUrl}/save`,
             {
                 code: code,
                 pod_name: podName,
+                file_name: file_name
             }, {
             headers: { "Content-Type": "application/json" },
         }
         );
-        setRunMode(res.data.mode)
-        console.log("바꿈")
+        console.log("성공", res)
 
     } catch (e) {
         if (e.response) {

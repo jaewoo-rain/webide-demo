@@ -19,6 +19,7 @@ import "codemirror/addon/fold/foldgutter.css";
 
 import { useDispatch } from "react-redux";
 import { setCode } from "../../store/projectSlice";
+import { saveCodeApi } from "../../service/saveService";
 
 export default function Editor() {
     const dispatch = useDispatch();
@@ -38,7 +39,7 @@ export default function Editor() {
     function addTab() {
         console.log("페이지 추가 탭 클릭")
     }
-    function saveCode() {
+    const saveCode = async () => {
         const cm = editorRef.current;
         if (!cm) return;
 
@@ -50,7 +51,9 @@ export default function Editor() {
         console.log("저장됨:", code);
 
         // 여기서 API 호출!
-        // fetch("/api/save", { method: "POST", body: JSON.stringify({ code }) })
+        await saveCodeApi({
+            code: code,
+        })
     }
 
 

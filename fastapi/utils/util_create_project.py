@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
-from config import (INTERNAL_NOVNC_PORT, DEFAULT_STORAGE, WORKSPACE_MOUNT_PATH)
+from config import (INTERNAL_NOVNC_PORT, DEFAULT_STORAGE, WORKSPACE_MOUNT_PATH, VOLUME_NAME)
 
 """K8s 리소스 name/label에 안전한 문자열로 변환"""
 def slug(s: str, max_len: int = 50) -> str:
@@ -23,11 +23,9 @@ def create_pvc(v1: client.CoreV1Api, namespace: str, pvc_name: str, labels: dict
         if e.status != 404:
             raise
 
-    """
-        ReadWriteOnce (RWO) 한 노드에서 Read/Write
-        ReadOnlyMany (ROX) 여러 노드에서 Read only
-        ReadWriteMany (RWX) 여러 노드에서 Read/Write
-    """
+        # ReadWriteOnce (RWO) 한 노드에서 Read/Write
+        # ReadOnlyMany (ROX) 여러 노드에서 Read only
+        # ReadWriteMany (RWX) 여러 노드에서 Read/Write
     pvc = client.V1PersistentVolumeClaim(
         metadata=client.V1ObjectMeta(
             name=pvc_name, 
@@ -52,8 +50,6 @@ def create_deployment(apps: client.AppsV1Api, namespace: str, deploy_name: str, 
             raise
 
     # PVC 이름이랑은 다르고, 컨테이너에서 마운트할 때 서로 연결해 주는 키
-    volume_name = "workspace"
-
     dep = client.V1Deployment(
         metadata=client.V1ObjectMeta(
             name=deploy_name, 
@@ -73,7 +69,7 @@ def create_deployment(apps: client.AppsV1Api, namespace: str, deploy_name: str, 
                             env=[client.V1EnvVar(name=k, value=str(v)) for k, v in env.items()],
                             volume_mounts=[
                                 client.V1VolumeMount(
-                                    name=volume_name, # Pod 안에서 이 볼륨을 부르는 이름
+                                    name=VOLUME_NAME, # Pod 안에서 이 볼륨을 부르는 이름
                                     mount_path=WORKSPACE_MOUNT_PATH,
                                 )
                             ],
@@ -81,7 +77,7 @@ def create_deployment(apps: client.AppsV1Api, namespace: str, deploy_name: str, 
                     ],
                     volumes=[
                         client.V1Volume(
-                            name=volume_name, # 어떤 볼륨을 붙일지 선택
+                            name=VOLUME_NAME, # 어떤 볼륨을 붙일지 선택
                             persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
                                 claim_name=pvc_name
                             ),

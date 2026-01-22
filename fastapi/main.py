@@ -1,17 +1,6 @@
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from kubernetes import client, config
-from kubernetes.client import (
-    V1Pod,
-    V1ObjectMeta,
-    V1PodSpec,
-    V1Container,
-    V1Service,
-    V1ServiceSpec,
-    V1ServicePort,
-    V1ContainerPort,
-    V1EnvVar,
-)
 from kubernetes.stream import stream
 from fastapi.middleware.cors import CORSMiddleware
 from utils.util_exec_run import exec_run
@@ -21,15 +10,15 @@ from request.run_request import RunRequest
 import os
 from fastapi import Query
 from typing import Optional, Dict
-import time
 from starlette.websockets import WebSocketState
 from response.create_container_response import CreateContainerResponse
 from request.create_container_request import CreateContainerRequest
-from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PORTS, VNC_APP_LABEL, NAMESPACE)
+from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PORTS, VNC_APP_LABEL, NAMESPACE, WORKSPACE)
 from kubernetes.client.rest import ApiException
 from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name)
 from request.delete_container_request import DeleteContainerRequest
 from response.delete_container_response import DeleteContainerResponse
+from dto.save_file import (SaveFileRequest, SaveFileResponse)
 
 app = FastAPI()
 
@@ -58,7 +47,6 @@ def _startup():
 # 실행
 @app.post("/run", response_model=RunResponse)
 async def run(req: RunRequest):
-    WORKSPACE = "/opt/workspace"
     try:
         # 터미널 연결 시험
         resp = SESSION.get(req.pod_name)
@@ -66,7 +54,7 @@ async def run(req: RunRequest):
              raise HTTPException(400, detail="터미널 연결 안됨.")
     
         # 파일 만들기
-        exec_path = await create_file(req.pod_name, req.code,file_name="main.py", base_path=WORKSPACE)
+        exec_path = await create_file(req.pod_name, req.code, file_name="main.py", base_path=WORKSPACE)
 
         # 파일 실행하기
         await exec_run(req.pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
@@ -164,6 +152,17 @@ async def delete_container(req: DeleteContainerRequest):
 # 이름 수정
 
 # 새로고침
+
+# 파일 저장
+# 코드랑 pod name 받아서create_file() 실행
+@app.post("/save", response_model=SaveFileResponse)
+async def save_file(req: SaveFileRequest):
+    exec_path = await create_file(req.pod_name, req.code, file_name=req.file_name, base_path=WORKSPACE)
+    return SaveFileResponse(exec_path=exec_path)
+
+# 파일 불러오기
+
+# 프로젝트 불러오
 
 # 연결
 @app.websocket("/ws/terminal")

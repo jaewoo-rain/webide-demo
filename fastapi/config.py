@@ -10,3 +10,5 @@ VNC_APP_LABEL = "vnc-session"
 NAMESPACE = "webide-net"
 DEFAULT_STORAGE = "10Gi"
 WORKSPACE_MOUNT_PATH = "/workspace" # 컨테이너 안에서 파일 저장할 경로
+VOLUME_NAME = "workspace"
+WORKSPACE = "/opt/workspace"
