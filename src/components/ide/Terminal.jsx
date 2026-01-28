@@ -1,13 +1,11 @@
 
-import { useEffect, useRef, useState } from "react";
-import { Terminal as XTerm } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
+import { useRef } from "react";
 import "xterm/css/xterm.css";
 import { useTerminalWs } from "../../hooks/useTerminalWs";
 import config from "../../config";
 import { useXtermMount } from "../../hooks/useXtermMount";
 
-export default function Terminal({ }) {
+export default function Terminal() {
     const termInstanceRef = useRef(null);
     // const fitAddonRef = useRef(null);
     const terminalRef = useRef(null);
@@ -22,11 +20,12 @@ export default function Terminal({ }) {
     let termReady = useXtermMount({ terminalRef, termInstanceRef })
 
 
-    const { status } = useTerminalWs({
-        term: termReady ? termInstanceRef.current : null,
+    useTerminalWs({
+        termRef: termInstanceRef,
         wsUrl,
-        enabled: true,
+        enabled: termReady,
     });
+
 
     const isClick = 0;
 
