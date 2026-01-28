@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from kubernetes import client, config
 from kubernetes.stream import stream
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,16 +9,23 @@ from response.run_response import RunResponse
 from request.run_request import RunRequest
 import os
 from fastapi import Query
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from starlette.websockets import WebSocketState
 from response.create_container_response import CreateContainerResponse
 from request.create_container_request import CreateContainerRequest
 from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PORTS, VNC_APP_LABEL, NAMESPACE, WORKSPACE)
 from kubernetes.client.rest import ApiException
 from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name)
-from request.delete_container_request import DeleteContainerRequest
 from response.delete_container_response import DeleteContainerResponse
 from dto.save_file import (SaveFileRequest, SaveFileResponse)
+from repository.db import get_db
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from config import settings
+from repository import projectRepository as crud
+from repository.db import Base, engine
+from repository.models.project import Project # 지우면 안됨
+from dto import project_dto as projectDto
 
 app = FastAPI()
 
@@ -43,6 +50,7 @@ def _startup():
         config.load_incluster_config()
     else:
         config.load_kube_config()
+    Base.metadata.create_all(bind=engine)
 
 # 실행
 @app.post("/run", response_model=RunResponse)
@@ -72,8 +80,18 @@ async def run(req: RunRequest):
 
 # 생성
 # kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+# get_db=요청 하나당 DB 세션을 하나 자동으로 만들어서 주입해달라
 @app.post("/containers", response_model=CreateContainerResponse)
-async def create_container(req: CreateContainerRequest):
+async def create_container(req: CreateContainerRequest, db: Session = Depends(get_db)):
+
+    owner = slug(req.user_name)
+    project = slug(req.project_name)
+
+    # 밑에 모두 중복 안돼, 장애 발생시 파드가 생성되므로 deploy는 하나만 생성됨
+    key = f"{owner}-{project}"
+    deploy_name = f"novnc-{key}"
+    pvc_name = f"{deploy_name}-pvc"
+    svc_name = f"{deploy_name}-svc"
 
     image = req.image or "jaewoo6257/vnc:1.0.0"
     env = dict(CONTAINER_ENV_DEFAULT)
@@ -86,14 +104,6 @@ async def create_container(req: CreateContainerRequest):
     # Deployment, StatefulSet, DaemonSet, ReplicaSet
     apps = client.AppsV1Api()
 
-    owner = slug(req.user_name)
-    project = slug(req.project_name)
-
-    # 밑에 모두 중복 안돼, 장애 발생시 파드가 생성되므로 deploy는 하나만 생성됨
-    key = f"{owner}-{project}"
-    deploy_name = f"novnc-{key}"
-    pvc_name = f"{deploy_name}-pvc"
-    svc_name = f"{deploy_name}-svc"
 
     labels = {
         "app": "novnc",
@@ -101,6 +111,22 @@ async def create_container(req: CreateContainerRequest):
         "project": project,
         "key": key, # selector가 이거 보고 pod 찾아감
     }
+
+
+    existed = crud.get_alive_by_key(db, key)
+    if existed:
+        # existed여도 런타임 값은 다시 구해서 CreateContainerResponse로 반환
+        novnc_port = create_service_nodeport(v1, NAMESPACE, svc_name, labels, ALLOWED_NOVNC_PORTS)
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
+
+        return CreateContainerResponse(
+            pod_name=pod_name,
+            novnc_port=novnc_port,
+            namespace=NAMESPACE,
+            deploy_name=existed.deploy_name,
+            svc_name=existed.svc_name,
+            pvc_name=existed.pvc_name,
+        )
 
     # 1. PVC 만들기
     create_pvc(v1, NAMESPACE, pvc_name, labels)
@@ -114,25 +140,50 @@ async def create_container(req: CreateContainerRequest):
     # pod_name 찾기
     pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
 
+    # DB 저장하기
+    obj = crud.create_project(db, {
+        "user_name_raw": req.user_name,
+        "project_name_raw": req.project_name,
+        "owner_slug": owner,
+        "project_slug": project,
+        "key": key,
+        "namespace": NAMESPACE,
+        "deploy_name": deploy_name,
+        "svc_name": svc_name,
+        "pvc_name": pvc_name,
+        "image": req.image,
+    })
+
     return CreateContainerResponse(
-        pod_name=pod_name, # 현재 Pod 이름(재시작 시 바뀔 수 있음)
+        pod_name=pod_name,
         novnc_port=novnc_port,
         namespace=NAMESPACE,
-        deploy_name=deploy_name,
-        svc_name=svc_name,
-        pvc_name=pvc_name,
+        deploy_name=obj.deploy_name,
+        svc_name=obj.svc_name,
+        pvc_name=obj.pvc_name,
     )
 
 # 삭제
 @app.delete("/containers", response_model=DeleteContainerResponse)
-async def delete_container(req: DeleteContainerRequest):
+async def delete_container(
+    user_name: str = Query(...),
+    project_name: str = Query(...),
+    db: Session = Depends(get_db)
+):
     v1 = client.CoreV1Api()
     apps = client.AppsV1Api()
 
-    key = f"{req.user_name}-{req.project_name}"
+    owner = slug(user_name)
+    project = slug(project_name)
+    key = f"{owner}-{project}"
     deploy_name = f"novnc-{key}"
-    svc_name = f"{deploy_name}-svc"
     pvc_name = f"{deploy_name}-pvc"
+    svc_name = f"{deploy_name}-svc"
+
+    # key = f"{user_name}-{project_name}"
+    # deploy_name = f"novnc-{key}"
+    # svc_name = f"{deploy_name}-svc"
+    # pvc_name = f"{deploy_name}-pvc"
 
     # Service
     v1.delete_namespaced_service(svc_name, NAMESPACE)
@@ -143,11 +194,25 @@ async def delete_container(req: DeleteContainerRequest):
     # PVC
     v1.delete_namespaced_persistent_volume_claim(pvc_name, NAMESPACE)
 
+    # DB 삭제
+    crud.hard_delete_by_key(db, key)
+
     return DeleteContainerResponse(
         deploy_name=deploy_name,
         svc_name=svc_name,
         pvc_name=pvc_name
     )
+
+# 프로젝트 목록 조회
+@app.get("/containers", response_model=List[projectDto.ProjectSimpleOut])
+def list_containers(
+    user_name: str = Query(...), 
+    db: Session = Depends(get_db)
+):
+    owner = slug(user_name)
+    result = crud.list_by_owner(db, owner)
+
+    return result
 
 # 이름 수정
 
