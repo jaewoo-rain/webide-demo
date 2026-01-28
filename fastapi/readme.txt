@@ -23,6 +23,6 @@ webide-demo> 여기서 사용
 docker build -t jaewoo6257/webide-react:1.0.8 .
 docker build --no-cache -t jaewoo6257/webide-react:echo .
 
-docker push jaewoo6257/webide-react:1.0.8
+docker push jaewoo6257/webide-react:1.0.9
 
 kubectl rollout restart deployment/webide-react -n webide-net
