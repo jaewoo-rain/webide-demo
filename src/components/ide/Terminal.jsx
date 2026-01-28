@@ -1,34 +1,46 @@
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import "xterm/css/xterm.css";
 import { useTerminalWs } from "../../hooks/useTerminalWs";
 import config from "../../config";
 import { useXtermMount } from "../../hooks/useXtermMount";
 
-export default function Terminal() {
+export default function Terminal({
+    userName,
+    projectName,
+    setReady = () => { },
+    podName = null }
+) {
     const termInstanceRef = useRef(null);
     // const fitAddonRef = useRef(null);
     const terminalRef = useRef(null);
     // const [termReady, setTermReady] = useState(false);
-
     // let wsUrl = "ws://localhost:30080/ws/terminal?pod_name=vnc-test";
     // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
-
     // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
-    const wsUrl = config.wsUrl + 'vnc-test';
 
+    const wsUrl = config.wsUrl + `?user_name=${userName}&project_name=${projectName}&pod_name=${podName}`;
     let termReady = useXtermMount({ terminalRef, termInstanceRef })
 
 
-    useTerminalWs({
+    let { status } = useTerminalWs({
         termRef: termInstanceRef,
         wsUrl,
         enabled: termReady,
     });
 
+    console.log("status:", status)
+
+    useEffect(() => {
+        if (status === "open") {
+            console.log("opensss")
+            setReady(true);
+        } else {
+            setReady(false)
+        }
+    }, [status, setReady]);
 
     const isClick = 0;
-
 
     return (
         <div id="terminal" className="h-full w-full bg-black flex flex-col">

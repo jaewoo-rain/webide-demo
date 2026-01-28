@@ -22,7 +22,7 @@ export function useTerminalWs({ termRef, wsUrl, enabled = true }) {
         wsRef.current = ws;
 
         ws.onopen = () => {
-            setStatus("open");
+
             term.writeln("🟢 WebSocket connected");
 
             // 터미널 입력 -> 서버 전송
@@ -33,6 +33,7 @@ export function useTerminalWs({ termRef, wsUrl, enabled = true }) {
             // 프롬프트 깨우기
             try {
                 ws.send("\r");
+                setStatus("open");
             } catch (e) {
                 console.warn("ws.send", e);
             }

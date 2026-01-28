@@ -1,6 +1,6 @@
 const config = {
   fastapiUrl: "http://210.117.181.56:32460/fastapi",
-  wsUrl: `ws://210.117.181.56:32460/fastapi/ws/terminal?pod_name=`
+  wsUrl: `ws://210.117.181.56:32460/fastapi/ws/terminal`
 };
 
 // const config = {

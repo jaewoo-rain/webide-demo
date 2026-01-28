@@ -204,7 +204,8 @@ async def delete_container(
     )
 
 # 프로젝트 목록 조회
-@app.get("/containers", response_model=List[projectDto.ProjectSimpleOut])
+# @app.get("/containers", response_model=List[projectDto.ProjectSimpleOut])
+@app.get("/containers")
 def list_containers(
     user_name: str = Query(...), 
     db: Session = Depends(get_db)
@@ -231,7 +232,13 @@ async def save_file(req: SaveFileRequest):
 
 # 연결
 @app.websocket("/ws/terminal")
-async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="pod_name"), client_sid: Optional[str] = Query(None, alias="sid")):
+async def ws_terminal(
+    websocket: WebSocket,
+    user_name: str = Query(..., alias="user_name"),
+    project_name: str = Query(..., alias="project_name"),
+    pod_name: Optional[str] = Query(None, alias="pod_name"),
+    client_sid: Optional[str] = Query(None, alias="sid"),
+    ):
 
     # WebSocket 연결을 "수락"한다.
     await websocket.accept()
@@ -239,6 +246,18 @@ async def ws_terminal(websocket: WebSocket, pod_name: str = Query(..., alias="po
     await websocket.send_text("✅ WS connected. attaching to pod...\r\n")
 
     v1 = client.CoreV1Api()
+
+    if pod_name is None or pod_name.strip() in ("", "null", "None"):
+        owner = slug(user_name)
+        project = slug(project_name)
+        key = f"{owner}-{project}"
+
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
+        if not pod_name:
+            await websocket.send_text(f"\r\n❌ no running pod for key={key}\r\n")
+            await websocket.close(code=1011)
+            return
+    
 
     resp = None
     try:
