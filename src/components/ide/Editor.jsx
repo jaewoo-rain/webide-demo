@@ -180,14 +180,13 @@ import "codemirror/addon/fold/comment-fold";
 import "codemirror/addon/fold/indent-fold";
 import "codemirror/addon/fold/foldgutter.css";
 
-// ✅ 자동완성(Hint) 애드온
 import "codemirror/addon/hint/show-hint";
 import "codemirror/addon/hint/show-hint.css";
 import "codemirror/addon/hint/anyword-hint";
 
 import { useDispatch } from "react-redux";
 import { setCode } from "../../store/projectSlice";
-import { saveCodeApi } from "../../service/saveService";
+import { saveCodeApi } from "../../api/saveService";
 
 export default function Editor() {
     const dispatch = useDispatch();
@@ -237,19 +236,20 @@ export default function Editor() {
             tabSize: 4,
             lineWrapping: false,
 
-            // ✅ 기존 유지: 한글 IME 안정화 (환경에 따라 힌트 팝업 영향 줄 수 있음)
+            // 기존 유지: 한글 IME 안정화 (환경에 따라 힌트 팝업 영향 줄 수 있음)
             inputStyle: "contenteditable",
 
             autoCloseBrackets: true,
             matchBrackets: true,
             scrollbarStyle: "native",
 
-            // ✅ Ctrl+Space로 자동완성
+            // Ctrl+Space로 자동완성
             extraKeys: {
                 "Ctrl-Space": "autocomplete",
             },
 
-            // ✅ 자동완성 옵션
+            // 자동완성 옵션
+            // true 시 바로 자동으로 입력 됨
             hintOptions: {
                 completeSingle: false,
             },
@@ -257,7 +257,7 @@ export default function Editor() {
 
         editorRef.current = cm;
 
-        // ✅ Ctrl+S 저장 (기존 유지)
+        // Ctrl+S 저장 (기존 유지)
         cm.on("keydown", (cmInstance, e) => {
             const isSave =
                 (e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "s";
@@ -271,35 +271,33 @@ export default function Editor() {
             }
         });
 
-        // ✅ 코드 변경 감지 (기존 유지)
+        // 코드 변경 감지
         cm.on("change", (instance) => {
             const code = instance.getValue();
             dispatch(setCode(code));
             // 여기서 localStorage 저장 등 추가 가능
         });
 
-        // ✅ 타이핑 중 자동완성 팝업 (추가)
+        // 타이핑 중 자동완성 팝업
         cm.on("inputRead", (instance, changeObj) => {
-            // 입력(+input)일 때만
+            // 붙여넣기, 삭제, 포맷팅 제외 타이핑만 대상
             if (!changeObj || changeObj.origin !== "+input") return;
 
             // 자동완성 이미 떠있으면 중복 호출 방지
             if (instance.state && instance.state.completionActive) return;
 
-            // 한글 IME 조합중일 때는 팝업 안 띄우는 게 안정적
-            // (inputStyle: contenteditable 환경에서 특히)
-            // CodeMirror 이벤트에 isComposing이 항상 있진 않아서,
+            // CodeMirror 이벤트에 isComposing이 항상 있진 않아서
             // 저장 키처럼 e.isComposing 체크는 못하고, 보수적으로 토큰 길이로 제어
             const cur = instance.getCursor();
             const token = instance.getTokenAt(cur);
 
-            // 2글자 이상일 때만 (원하면 1로 낮춰)
+            // 2글자 이상일 때만 (원하면 1로 낮추기 가능)
             if (!token || !token.string || token.string.length < 2) return;
 
             instance.showHint({ completeSingle: false });
         });
 
-        // ✅ 언마운트/리로드 시 정리 (StrictMode/라우팅 대비)
+        // 언마운트/리로드 시 정리 (StrictMode/라우팅 대비)
         return () => {
             if (editorRef.current) {
                 editorRef.current.toTextArea();

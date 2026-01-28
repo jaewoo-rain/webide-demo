@@ -1,3 +1,5 @@
+import os
+
 CONTAINER_ENV_DEFAULT= {
     "VNC_PORT": "5901",
     "NOVNC_PORT": "6081",
@@ -12,3 +14,9 @@ DEFAULT_STORAGE = "10Gi"
 WORKSPACE_MOUNT_PATH = "/workspace" # 컨테이너 안에서 파일 저장할 경로
 VOLUME_NAME = "workspace"
 WORKSPACE = "/opt/workspace"
+
+class Settings:
+    DATABASE_URL: str = os.getenv("DATABASE_URL")  # K8s Secret로 주입
+    # NAMESPACE: str = os.getenv("NAMESPACE", "webide-net")
+
+settings = Settings()

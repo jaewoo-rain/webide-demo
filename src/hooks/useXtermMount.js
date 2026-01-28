@@ -15,7 +15,7 @@ export function useXtermMount({ terminalRef, termInstanceRef }) {
 
         // 중복 생성 방지
         if (termInstanceRef.current) {
-            setTermReady(true);
+            queueMicrotask(() => setTermReady(true));
             return;
         }
 
@@ -41,11 +41,13 @@ export function useXtermMount({ terminalRef, termInstanceRef }) {
         // 저장
         termInstanceRef.current = term;
         fitAddonRef.current = fitAddon;
-        setTermReady(true);
+        queueMicrotask(() => setTermReady(true));
 
         // 정리
         return () => {
-            try { term.dispose(); } catch { }
+            try { term.dispose(); } catch (e) {
+                console.log("error term dispose", e)
+            }
             termInstanceRef.current = null;
             fitAddonRef.current = null;
             setTermReady(false);

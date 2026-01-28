@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { runCodeApi } from "../../service/runService";
+import { runCodeApi } from "../../api/runService";
 
 export default function Header({ setRunMode }) {
 

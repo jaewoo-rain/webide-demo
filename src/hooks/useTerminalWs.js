@@ -7,15 +7,15 @@ import { useEffect, useRef, useState } from "react";
  * - term 입력 -> ws.send
  */
 
-export function useTerminalWs({ term, wsUrl, enabled = true }) {
+export function useTerminalWs({ termRef, wsUrl, enabled = true }) {
     const wsRef = useRef(null);
     const disposerRef = useRef(null);
-    const [status, setStatus] = useState("idle"); // idle|connecting|open|closed|error
+    const [status, setStatus] = useState("idle"); // idle|open|closed|error
 
     useEffect(() => {
+        const term = termRef.current;
         if (!enabled || !term || !wsUrl) return;
 
-        setStatus("connecting");
         term.writeln("🔌 WebSocket connecting...");
 
         const ws = new WebSocket(wsUrl);
@@ -31,7 +31,11 @@ export function useTerminalWs({ term, wsUrl, enabled = true }) {
             });
 
             // 프롬프트 깨우기
-            try { ws.send("\r"); } catch { }
+            try {
+                ws.send("\r");
+            } catch (e) {
+                console.warn("ws.send", e);
+            }
         };
 
         // 서버에서 받는 문자열
@@ -53,16 +57,20 @@ export function useTerminalWs({ term, wsUrl, enabled = true }) {
 
         return () => {
             if (disposerRef.current) {
-                try { disposerRef.current.dispose(); } catch { }
+                try { disposerRef.current.dispose(); } catch (e) {
+                    console.warn("terminal dispose error", e);
+                }
                 disposerRef.current = null;
             }
             // ws 종료
             if (wsRef.current) {
-                try { wsRef.current.close(); } catch { }
+                try { wsRef.current.close(); } catch (e) {
+                    console.warn("terminal close error", e);
+                }
                 wsRef.current = null;
             }
         };
-    }, [term, wsUrl, enabled]);
+    }, [termRef, wsUrl, enabled]);
 
     return { status };
 }
