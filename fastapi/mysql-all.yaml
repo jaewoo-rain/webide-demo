@@ -1,0 +1,109 @@
+# 1. Secret (비밀번호)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: webide-net
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: jcolab1234
+  MYSQL_USER: user1
+  MYSQL_PASSWORD: jaewoo
+  MYSQL_DATABASE: webide
+  DATABASE_URL: mysql+pymysql://user1:jaewoo@mysql:3306/webide?charset=utf8mb4
+
+---
+# 2. PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: webide-net
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-path
+
+---
+# 3. MySQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: webide-net
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+
+---
+# 4. MySQL Service
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: mysql
+#   namespace: webide-net
+# spec:
+#   type: ClusterIP
+#   selector:
+#     app: mysql
+#   ports:
+#     - port: 3306
+#       targetPort: 3306
+
+# 개발용 서비스
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: webide-net
+spec:
+  type: NodePort
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+      nodePort: 31111

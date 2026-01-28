@@ -75,6 +75,9 @@ spec:
       containers:
         - name: ide-fastapi
           image: jaewoo6257/ide-demo-fastapi:echo
+          env:
+            - name: DATABASE_URL
+              value: "mysql+pymysql://user1:jaewoo@mysql:3306/webide?charset=utf8mb4"
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

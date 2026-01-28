@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: webide-react
-          image: jaewoo6257/webide-react:1.0.7
+          image: jaewoo6257/webide-react:1.0.9
           imagePullPolicy: Always
           ports:
             - containerPort: 80
