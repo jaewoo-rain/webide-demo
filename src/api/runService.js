@@ -1,7 +1,7 @@
 import axios from "axios";
 import config from "../config";
 
-export async function runCodeApi({ code, setRunMode, podName = "vnc-test" }) {
+export async function runCodeApi({ code, setRunMode, projectName, username }) {
     // e.preventDefault();
 
     try {
@@ -9,7 +9,8 @@ export async function runCodeApi({ code, setRunMode, podName = "vnc-test" }) {
             `${config.fastapiUrl}/run`,
             {
                 code: code,
-                pod_name: podName,
+                username: username,
+                project_name: projectName,
             }, {
             headers: { "Content-Type": "application/json" },
         }

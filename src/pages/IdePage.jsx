@@ -14,7 +14,11 @@ export default function IdePage() {
   return (
     <div className="flex flex-col h-screen bg-[#252526]">
       {runMode === "gui" && <GuiModal onClose={() => setRunMode("cli")} />}
-      <Header setRunMode={setRunMode} />
+      <Header
+        setRunMode={setRunMode}
+        projectName={projectName}
+        username={userName}
+      />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
         {/* ✅ Ready 전 오버레이 */}

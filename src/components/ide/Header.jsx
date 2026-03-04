@@ -1,11 +1,12 @@
 import { useSelector } from "react-redux";
 import { runCodeApi } from "../../api/runService";
 
-export default function Header({ setRunMode }) {
+export default function Header({ setRunMode, projectName, username }) {
 
     const code = useSelector((s) => s.project.code);
     const runCode = async () => {
-        await runCodeApi({ code, setRunMode })
+        // console.log(`username=${username}, projectName=${projectName}`)
+        await runCodeApi({ code, setRunMode, projectName, username })
     }
 
 
@@ -22,7 +23,8 @@ export default function Header({ setRunMode }) {
 
             {/* 이름 */}
             <div className="flex items-center">
-                <span className="font-['Pacifico'] text-xl text-white mr-4 shrink-0 whitespace-nowrap">Web-IDE</span>
+                <span className="font-['Pacifico'] text-xl text-white mr-4 shrink-0 whitespace-nowrap">Web-IDE ss</span>
+
             </div>
 
             {/* 프로젝트 */}

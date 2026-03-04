@@ -26,7 +26,9 @@ from repository import projectRepository as crud
 from repository.db import Base, engine
 from repository.models.project import Project # 지우면 안됨
 from dto import project_dto as projectDto
-
+from dto import load_file as loadDto
+from pathlib import Path
+import uuid
 app = FastAPI()
 
 # CORS 설정
@@ -56,21 +58,32 @@ def _startup():
 @app.post("/run", response_model=RunResponse)
 async def run(req: RunRequest):
     try:
+        v1 = client.CoreV1Api()
+
+        owner = slug(req.username)
+        project = slug(req.project_name)
+        key = f"{owner}-{project}"
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
+
+
         # 터미널 연결 시험
-        resp = SESSION.get(req.pod_name)
+        resp = SESSION.get(pod_name)
         if not resp or not resp.is_open():
              raise HTTPException(400, detail="터미널 연결 안됨.")
     
         # 파일 만들기
-        exec_path = await create_file(req.pod_name, req.code, file_name="main.py", base_path=WORKSPACE)
+        exec_path = await create_file(pod_name, req.code, file_name="main.py", base_path=WORKSPACE)
 
         # 파일 실행하기
-        await exec_run(req.pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
+        await exec_run(pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
         resp.write_stdin(f"/bin/python3 '{exec_path}'\n")
 
         # cli, gui 구분하기
         for _ in range(5):
-            check = await exec_run(req.pod_name, ["bash", "-c", "DISPLAY=:1 xwininfo -root -tree | grep -E '\"[^ ]+\"' && echo yes || echo no"])
+            check = await exec_run(
+                pod_name, ["bash", "-c", 
+                               "DISPLAY=:1 xwininfo -root -tree | grep -E "
+                               "'\"[^ ]+\"' && echo yes || echo no"])
             if "yes" in check: return {"mode": "gui"}
             await asyncio.sleep(0.2)
         return {"mode": "cli"}
@@ -226,9 +239,57 @@ async def save_file(req: SaveFileRequest):
     exec_path = await create_file(req.pod_name, req.code, file_name=req.file_name, base_path=WORKSPACE)
     return SaveFileResponse(exec_path=exec_path)
 
-# 파일 불러오기
+# 프로젝트 불러오기
+@app.get("/load", response_model=loadDto.LoadFileResponse)
+async def load_file(req: loadDto.LoadFileRequest):
+    
+    try:
+         # 1. 파일 목록 (find)
+        raw_output = await exec_run(req.pod_name,["bash", "-c", f"fine {WORKSPACE} -print0"])
+        if not raw_output:
+            return 0
+        
+        paths = [p for p in raw_output.split('\0') if p]
+        file_paths_blob = await exec_run(req.pod_name, ["bash", "-c", f"find {WORKSPACE} -type f -print0"])
+        file_paths_set = set(file_paths_blob.split('\0'))
 
-# 프로젝트 불러오
+        # 2. 파일 내용 (cat)
+        contents = {}
+        valid_paths = [p for p in file_paths_set if p]
+        if valid_paths:
+            delimiter = "---FILE-DELIMITER---"
+            # f-string 밖에서 경로 문자열을 먼저 만듭니다.
+            paths_quoted = " ".join([f'"{p}"' for p in valid_paths])
+            cmd = f"for f in {paths_quoted}; do cat \"$f\"; echo \"{delimiter}\"; done"
+            content_blob = await exec_run(req.pod_name, ["bash", "-c", cmd])
+            split_contents = content_blob.split(delimiter)
+            for i, path in enumerate(valid_paths):
+                if i < len(split_contents): contents[path] = split_contents[i].strip()
+
+        # 3. 트리 생성
+        file_map, nodes = {"root": {"name": "", "type": "folder"}}, {"root": {"id": "root", "type": "folder", "children": []}}
+        for path_str in sorted(paths):
+            p = Path(path_str)
+            if p == Path(WORKSPACE): continue
+            node_id, name = str(uuid.uuid4()), p.name
+            parent_path = str(p.parent)
+            parent_id = "root"
+            for nid, n in nodes.items():
+                if n.get("path") == parent_path: parent_id = nid; break
+            
+            is_file = path_str in file_paths_set
+            new_node = {"id": node_id, "type": "file" if is_file else "folder", "path": path_str}
+            if not is_file: new_node["children"] = []
+            nodes[node_id] = new_node
+            nodes[parent_id]["children"].append(new_node)
+            file_map[node_id] = {"name": name, "type": "file" if is_file else "folder", "path": path_str, "content": contents.get(path_str)}
+
+        for node in nodes.values(): node.pop("path", None)
+        return loadDto.LoadFileResponse(tree=nodes["root"], fileMap=file_map)
+    
+    except Exception as e: raise HTTPException(500, detail=str(e))
+
+
 
 # 연결
 @app.websocket("/ws/terminal")
