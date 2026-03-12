@@ -134,6 +134,7 @@ async def create_container(req: CreateContainerRequest, db: Session = Depends(ge
 
 
     existed = crud.get_alive_by_key(db, key)
+    
     if existed:
         # existed여도 런타임 값은 다시 구해서 CreateContainerResponse로 반환
         novnc_port = create_service_nodeport(v1, NAMESPACE, svc_name, labels, ALLOWED_NOVNC_PORTS)

@@ -17,7 +17,7 @@ typing-extensions
 PyJWT
 
 # Password hashing
-pwdlib
+pwdlib[argon2]
 
 # OAuth2 form login
 python-multipart

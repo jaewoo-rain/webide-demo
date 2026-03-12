@@ -13,3 +13,10 @@ class UserReadResponse(BaseModel):
     # email: EmailStr
 
     model_config = ConfigDict(from_attributes=True)
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    project: str

@@ -3,7 +3,7 @@ import jwt
 from jwt import InvalidTokenError, ExpiredSignatureError
 from pwdlib import PasswordHash
 
-from app.core.config import settings
+from config import settings
 
 password_hash = PasswordHash.recommended()
 

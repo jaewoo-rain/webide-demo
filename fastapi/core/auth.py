@@ -1,41 +1,47 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
 from jwt import InvalidTokenError, ExpiredSignatureError
 
 from repository.db import get_db
-from core.security import decode_access_token
 from repository.models.user import User
+from core.security import decode_access_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+from repository import userRepository as user_crud
 
-# 유저 정보 확인
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="유효하지 않은 인증 정보입니다.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
 
     try:
-        payload = decode_access_token(token)
-        username: str | None = payload.get("sub")
+        payload = decode_access_token(access_token)
+        username = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
     except ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰이 만료되었습니다.",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Token expired"
         )
     except InvalidTokenError:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
 
-    user = db.query(User).filter(User.username == username).first()
-    if user is None:
-        raise credentials_exception
+    user = user_crud.get_by_username(db, username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
 
     return user
