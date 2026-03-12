@@ -77,12 +77,8 @@ def login(
         path="/",
     )
 
-    # 기존 프로젝트 목록
-    owner = slug(req.username)
-    projectList = project_crud.list_by_owner(db, owner)
-
     return {
-        "project": projectList
+        "username": user.username
     }
 
 @router.get("/readTest")

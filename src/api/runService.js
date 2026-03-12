@@ -8,6 +8,7 @@ export async function runCodeApi({ code, setRunMode, projectName, username }) {
         const res = await axios.post(
             `${config.fastapiUrl}/run`,
             {
+                withCredentials: true,
                 code: code,
                 username: username,
                 project_name: projectName,

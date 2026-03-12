@@ -1,23 +1,24 @@
+import React, { useState } from "react";
+import LoginCard from "../components/login/loginCard";
 
-export default function HomePage() {
-
-    function loadData() {
-        // 로컬 스토리지 내부 jwt 존재하는지 확인
-        const jwt = checkStorage()
-
-        // jwt존재하면 서버에 보내서 확인하기
-
-    }
-
-    function checkStorage() {
-        // 로컬 스토리지 내부 jwt 존재하는지 확인
-    }
+export default function LoginPage() {
+    const [isLogin, setIsLogin] = useState(true);
+    const [userId, setUserId] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
 
     return (
-        <div>
-            <h1>로그인</h1>
-            <LoginComponent />
-
+        <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white p-4">
+            <LoginCard
+                isLogin={isLogin}
+                setIsLogin={setIsLogin}
+                userId={userId}
+                setUserId={setUserId}
+                password={password}
+                setPassword={setPassword}
+                name={name}
+                setName={setName}
+            />
         </div>
-    )
+    );
 }

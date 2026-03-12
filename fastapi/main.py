@@ -30,13 +30,15 @@ from dto import load_file as loadDto
 from pathlib import Path
 import uuid
 from routers.auth import router as auth_router
+from repository.models.user import User
+from core.auth import get_current_user
 
 app = FastAPI()
 
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -226,16 +228,35 @@ async def delete_container(
 
 # 프로젝트 목록 조회
 # @app.get("/containers", response_model=List[projectDto.ProjectSimpleOut])
+# @app.get("/containers")
+# def list_containers(
+#     user_name: str = Query(...), 
+#     db: Session = Depends(get_db)
+# ):
+#     owner = slug(user_name)
+#     result = crud.list_by_owner(db, owner)
+
+#     return result
+
+# 프로젝트 리스트 반환
 @app.get("/containers")
-def list_containers(
-    user_name: str = Query(...), 
-    db: Session = Depends(get_db)
+def read_protected_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    owner = slug(user_name)
-    result = crud.list_by_owner(db, owner)
 
-    return result
+    projectList = crud.list_by_owner(db, current_user.username)
 
+    projectList = [
+        {
+            "owner_slug": p.owner_slug,
+            "project_name_raw": p.project_name_raw,
+            "key": p.key
+        }
+        for p in projectList
+    ]
+
+    return projectList
 # 이름 수정
 
 # 새로고침
@@ -303,8 +324,9 @@ async def load_file(req: loadDto.LoadFileRequest):
 @app.websocket("/ws/terminal")
 async def ws_terminal(
     websocket: WebSocket,
-    user_name: str = Query(..., alias="user_name"),
-    project_name: str = Query(..., alias="project_name"),
+    # user_name: str = Query(..., alias="user_name"),
+    # project_name: str = Query(..., alias="project_name"),
+    key: str = Query(..., alias="key"),
     pod_name: Optional[str] = Query(None, alias="pod_name"),
     client_sid: Optional[str] = Query(None, alias="sid"),
     ):
@@ -317,9 +339,9 @@ async def ws_terminal(
     v1 = client.CoreV1Api()
 
     if pod_name is None or pod_name.strip() in ("", "null", "None"):
-        owner = slug(user_name)
-        project = slug(project_name)
-        key = f"{owner}-{project}"
+        # owner = slug(user_name)
+        # project = slug(project_name)
+        # key = f"{owner}-{project}"
 
         pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
         if not pod_name:

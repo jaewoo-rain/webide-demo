@@ -8,6 +8,7 @@ export async function createProjectApi({ project_name, user_name, image = "jaewo
         const res = await axios.post(
             `${config.fastapiUrl}/containers`,
             {
+                withCredentials: true,
                 project_name: project_name,
                 user_name: user_name,
                 image: image
@@ -37,7 +38,7 @@ export async function createProjectApi({ project_name, user_name, image = "jaewo
     }
 }
 
-// delete 쿼리
+// 프로젝트 삭제
 export async function deleteProjectApi({ project_name, user_name }) {
     // e.preventDefault();
 
@@ -45,6 +46,7 @@ export async function deleteProjectApi({ project_name, user_name }) {
         const res = await axios.delete(
             `${config.fastapiUrl}/containers`,
             {
+                withCredentials: true,
                 params: { user_name, project_name }
             }
         );
@@ -61,6 +63,22 @@ export async function deleteProjectApi({ project_name, user_name }) {
     }
 }
 
-export async function findAllProjectApi({ user_name }) {
+// 프로젝트 목록 조회
+export async function projectListApi() {
+    try {
+        const res = await axios.get(
+            `${config.fastapiUrl}/containers`,
+            {
+                withCredentials: true,
+            }
+        );
 
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `사용자 조회 실패 (${e.response.status})`);
+        } else {
+            throw new Error(`네트워크 오류: ${e.message}`);
+        }
+    }
 }

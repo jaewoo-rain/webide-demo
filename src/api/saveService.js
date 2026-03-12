@@ -8,6 +8,7 @@ export async function saveCodeApi({ code, file_name = "main.py", podName = "vnc-
         const res = await axios.post(
             `${config.fastapiUrl}/save`,
             {
+                withCredentials: true,
                 code: code,
                 pod_name: podName,
                 file_name: file_name

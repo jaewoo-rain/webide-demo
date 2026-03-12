@@ -1,14 +1,32 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import AuthView from '../components/auth/AuthView';
-import ProjectListView from '../components/dashboard/ProjectListView';
+import Header from '../components/home/Header';
+import Main from '../components/home/Main';
+import LoginPage from './LoginPage';
+
+// export default function HomePage() {
+//   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+
+//   return (
+//     <>
+//       {isAuthenticated ? <ProjectListView /> : <AuthView />}
+//     </>
+//   );
+// }
 
 export default function HomePage() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   return (
     <>
-      {isAuthenticated ? <ProjectListView /> : <AuthView />}
+      {isAuthenticated ?
+        <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+          <Header />
+          <Main />
+        </div>
+        : <LoginPage />
+      }
+
     </>
   );
-}
+}
