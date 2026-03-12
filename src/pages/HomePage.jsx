@@ -1,25 +1,14 @@
-import { useNavigate } from "react-router-dom"
+import React from 'react';
+import { useSelector } from 'react-redux';
+import AuthView from '../components/auth/AuthView';
+import ProjectListView from '../components/dashboard/ProjectListView';
 
 export default function HomePage() {
-    const navigate = useNavigate()
-    const userName = "test-user"
-    const projectName = "test-project"
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
-    return (
-        <div>
-            홈화면
-            목록들
-            <div>
-                카드 구역
-            </div>
-
-            <button
-                onClick={() => {
-                    navigate(`/ide/${userName}/${projectName}`);
-                }}
-            >
-                이동
-            </button>
-        </div>
-    )
-}
+  return (
+    <>
+      {isAuthenticated ? <ProjectListView /> : <AuthView />}
+    </>
+  );
+}
