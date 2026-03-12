@@ -21,7 +21,7 @@ export default function IdePage() {
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
-        {/* ✅ Ready 전 오버레이 */}
+        {/* Ready 전 오버레이 */}
         {!isReady && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="px-4 py-3 rounded-lg bg-[#1E1E1E] border border-[#333] text-white/80 text-sm">
