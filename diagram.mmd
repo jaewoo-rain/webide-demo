@@ -1,0 +1,82 @@
+graph LR
+    subgraph Client [User Environment]
+        Browser["Web Browser<br/>(React Application)"]
+        iframe["VNC Viewer iframe<br/>(noVNC)"]
+    end
+
+    subgraph Cluster [Kubernetes Cluster]
+        
+        %% Network/Ingress Layer
+        subgraph Ingress_Layer [Ingress & Network Layer]
+            Ingress["Ingress Controller<br/>(Nginx Pod)"]
+            NodePortRange["NodePort Range<br/>(30000-32767)"]
+        end
+
+        subgraph Control_Plane [Control Plane]
+            API[K8s API Server]
+        end
+
+        subgraph Service_Mesh [Net Namespace: webide-net]
+            direction TB
+            
+            %% Frontend Components
+            subgraph Frontend_App ["Frontend (React)"]
+                R_Pod[React Nginx Pod]
+                R_SVC["React Service<br/>(ClusterIP: 80)"]
+            end
+
+            %% Backend Components
+            subgraph Backend_App ["Backend (FastAPI)"]
+                FastAPI["FastAPI Pod<br/>(Orchestrator)"]
+                F_SVC["Backend Service<br/>(ClusterIP: 8000)"]
+            end
+        end
+
+        %% Dynamic User Workspaces
+        subgraph User_Workspaces [User Workspaces]
+            direction TB
+            subgraph User_Pod ["User Pod (Managed by Deployment)"]
+                Container[Container: Ubuntu]
+                App["Python App<br/>(User Code)"]
+                X11["Xvfb / X Server<br/>(Display :1)"]
+                VNC["TigerVNC Server<br/>(:5901)"]
+                noVNC["noVNC / Websockify<br/>(:6081)"]
+                Bash[Bash Shell]
+            end
+            
+            U_SVC["User Service<br/>(NodePort)"]
+            PVC["Persistent Volume Claim<br/>(User Data)"]
+        end
+    end
+
+    %% Routing Flows
+    
+    %% 1. Static Content Flow
+    Browser -- "1. URL '/'" --> Ingress
+    Ingress -- "Routing /" --> R_SVC
+    R_SVC --> R_Pod
+
+    %% 2. API Flow
+    Browser -- "2. API Post '/fastapi/*'" --> Ingress
+    Ingress -- "Routing /fastapi/*" --> F_SVC
+    F_SVC --> FastAPI
+
+    %% 3. Terminal WebSocket Flow (Corrected: via API Server)
+    Browser -- "3. WS '/fastapi/ws/terminal'" --> Ingress
+    FastAPI -- "4. K8s Stream (SPDY)" --> API
+    API -.->|Tunnel / Exec| Bash
+
+    %% 4. Orchestration Flow
+    FastAPI -- "5. API Call (CRUD)" --> API
+    API -- "6. Schedule & Manage" --> User_Workspaces
+    API -.->|Mount| PVC
+
+    %% 5. GUI Rendering Flow
+    App -- "Draw" --> X11
+    X11 -- "Capture" --> VNC
+    VNC -- "TCP" --> noVNC
+    
+    %% 6. VNC Streaming Flow
+    iframe -- "7. WS (RFB)" --> NodePortRange
+    NodePortRange -- "Direct Access" --> U_SVC
+    U_SVC --> noVNC
