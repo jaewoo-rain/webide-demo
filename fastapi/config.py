@@ -1,4 +1,5 @@
 import os
+from pydantic import BaseModel
 
 CONTAINER_ENV_DEFAULT= {
     "VNC_PORT": "5901",
@@ -15,8 +16,17 @@ WORKSPACE_MOUNT_PATH = "/workspace" # 컨테이너 안에서 파일 저장할 �
 VOLUME_NAME = "workspace"
 WORKSPACE = "/opt/workspace"
 
-class Settings:
+# class Settings:
+#     DATABASE_URL: str = os.getenv("DATABASE_URL")  # K8s Secret로 주입
+
+#     # NAMESPACE: str = os.getenv("NAMESPACE", "webide-net")
+
+# settings = Settings()
+
+class Settings(BaseModel):
     DATABASE_URL: str = os.getenv("DATABASE_URL")  # K8s Secret로 주입
-    # NAMESPACE: str = os.getenv("NAMESPACE", "webide-net")
+    SECRET_KEY: str = "jcolabjcolabjcolabjcolabjcolabjcolabjcolabjcolab1234"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
 settings = Settings()

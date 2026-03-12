@@ -29,6 +29,8 @@ from dto import project_dto as projectDto
 from dto import load_file as loadDto
 from pathlib import Path
 import uuid
+from routers.auth import router as auth_router
+
 app = FastAPI()
 
 # CORS 설정
@@ -39,6 +41,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 로그인 관련 api
+app.include_router(auth_router)
 
 # POD_NAME  = "vnc-test" # 일단 하나 고정
 CONTAINER_NAME = None # pod에 컨테이너가 1개면 None, 여러 개면 이름 지정
@@ -53,6 +58,8 @@ def _startup():
     else:
         config.load_kube_config()
     Base.metadata.create_all(bind=engine)
+
+
 
 # 실행
 @app.post("/run", response_model=RunResponse)

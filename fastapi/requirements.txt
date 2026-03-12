@@ -12,3 +12,12 @@ pymysql
 # Validation
 pydantic>=2.7
 typing-extensions
+
+# JWT
+PyJWT
+
+# Password hashing
+pwdlib
+
+# OAuth2 form login
+python-multipart
