@@ -194,16 +194,12 @@ async def create_container(
 # 삭제
 @app.delete("/containers", response_model=DeleteContainerResponse)
 async def delete_container(
-    user_name: str = Query(...),
-    project_name: str = Query(...),
+    key: str = Query(...),
     db: Session = Depends(get_db)
 ):
     v1 = client.CoreV1Api()
     apps = client.AppsV1Api()
 
-    owner = slug(user_name)
-    project = slug(project_name)
-    key = f"{owner}-{project}"
     deploy_name = f"novnc-{key}"
     pvc_name = f"{deploy_name}-pvc"
     svc_name = f"{deploy_name}-svc"

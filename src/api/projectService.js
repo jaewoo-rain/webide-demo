@@ -38,7 +38,7 @@ export async function createProjectApi({ project_name, image = "jaewoo6257/vnc:1
 }
 
 // 프로젝트 삭제
-export async function deleteProjectApi({ project_name, user_name }) {
+export async function deleteProjectApi({ key }) {
     // e.preventDefault();
 
     try {
@@ -46,7 +46,7 @@ export async function deleteProjectApi({ project_name, user_name }) {
             `${config.fastapiUrl}/containers`,
             {
                 withCredentials: true,
-                params: { user_name, project_name }
+                params: { key }
             }
         );
         return res.data;
