@@ -1,24 +1,11 @@
 import React, { useState } from "react";
 import ProjectsGrid from "./ProjectsGrid";
 import NewProjectModal from "./NewProjectModal";
-import { createProjectApi, projectListApi } from "../../api/projectService";
-import { useDispatch } from "react-redux";
-import { setProjects } from "../../store/listSlice";
 
 export default function Main() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const dispatch = useDispatch();
 
-    const handleCreateProject = async (data) => {
-        console.log("새 프로젝트 생성:", data.projectName);
-
-        await createProjectApi({ project_name: data.projectName, image: data.language })
-        const projectList = await projectListApi();
-
-        dispatch(setProjects(projectList));
-
-    };
 
     return (
         <main className="flex-1 max-w-7xl mx-auto px-6 py-12 w-full">
@@ -49,7 +36,6 @@ export default function Main() {
             <NewProjectModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onCreate={handleCreateProject}
             />
 
         </main>

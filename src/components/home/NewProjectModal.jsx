@@ -1,8 +1,23 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { createProjectApi, projectListApi } from "../../api/projectService";
+import { setProjects } from "../../store/listSlice";
 
-export default function NewProjectModal({ isOpen, onClose, onCreate }) {
+export default function NewProjectModal({ isOpen, onClose }) {
     const [projectName, setProjectName] = useState("");
     const [language, setLanguage] = useState("python");
+
+    const dispatch = useDispatch();
+
+    const onCreate = async (data) => {
+        console.log("새 프로젝트 생성:", data.projectName);
+
+        await createProjectApi({ project_name: data.projectName, image: data.language })
+        const projectList = await projectListApi();
+
+        dispatch(setProjects(projectList));
+
+    };
 
     if (!isOpen) return null;
 
