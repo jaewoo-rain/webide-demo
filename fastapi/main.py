@@ -38,7 +38,7 @@ app = FastAPI()
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://210.117.181.234:5173","http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,9 +69,7 @@ async def run(req: RunRequest):
     try:
         v1 = client.CoreV1Api()
 
-        owner = slug(req.username)
-        project = slug(req.project_name)
-        key = f"{owner}-{project}"
+        key = req.projectKey
         pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
 
 
@@ -104,9 +102,13 @@ async def run(req: RunRequest):
 # kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
 # get_db=요청 하나당 DB 세션을 하나 자동으로 만들어서 주입해달라
 @app.post("/containers", response_model=CreateContainerResponse)
-async def create_container(req: CreateContainerRequest, db: Session = Depends(get_db)):
+async def create_container(
+    req: CreateContainerRequest, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
 
-    owner = slug(req.user_name)
+    owner = slug(current_user.username)
     project = slug(req.project_name)
 
     # 밑에 모두 중복 안돼, 장애 발생시 파드가 생성되므로 deploy는 하나만 생성됨
@@ -117,6 +119,9 @@ async def create_container(req: CreateContainerRequest, db: Session = Depends(ge
 
     image = req.image or "jaewoo6257/vnc:1.0.0"
     env = dict(CONTAINER_ENV_DEFAULT)
+
+    # 기존에 존재하는지 확인 후 리턴하기
+    
 
     # 쿠버네티스의 가장 기본 리소스들
     # Pod, Service, ConfigMap, Secret, Namespace, Node, PVC, Event
@@ -165,7 +170,7 @@ async def create_container(req: CreateContainerRequest, db: Session = Depends(ge
 
     # DB 저장하기
     obj = crud.create_project(db, {
-        "user_name_raw": req.user_name,
+        "user_name_raw": current_user.username,
         "project_name_raw": req.project_name,
         "owner_slug": owner,
         "project_slug": project,
@@ -328,7 +333,6 @@ async def ws_terminal(
     # project_name: str = Query(..., alias="project_name"),
     key: str = Query(..., alias="key"),
     pod_name: Optional[str] = Query(None, alias="pod_name"),
-    client_sid: Optional[str] = Query(None, alias="sid"),
     ):
 
     # WebSocket 연결을 "수락"한다.

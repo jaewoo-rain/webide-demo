@@ -10,11 +10,11 @@ export async function loginApi({ username, password }) {
                 password,
             },
             {
+                withCredentials: true,
                 headers: { "Content-Type": "application/json" },
             }
         );
 
-        console.log("로그인 성공", res.data);
         return res.data;
     } catch (e) {
         if (e.response) {

@@ -9,15 +9,14 @@ import { useParams } from "react-router-dom";
 export default function IdePage() {
   const [runMode, setRunMode] = useState("cli");
   const [isReady, setReady] = useState(false);
-  const { userName, projectName } = useParams();
+  const { projectKey } = useParams();
 
   return (
     <div className="flex flex-col h-screen bg-[#252526]">
       {runMode === "gui" && <GuiModal onClose={() => setRunMode("cli")} />}
       <Header
         setRunMode={setRunMode}
-        projectName={projectName}
-        username={userName}
+        projectKey={projectKey}
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -42,8 +41,7 @@ export default function IdePage() {
 
           <div className="h-[200px] overflow-hidden">
             <Terminal
-              userName={userName}
-              projectName={projectName}
+              projectKey={projectKey}
               setReady={setReady}
             />
           </div>

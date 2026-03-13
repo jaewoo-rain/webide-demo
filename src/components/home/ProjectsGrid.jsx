@@ -4,14 +4,12 @@ import { useSelector } from "react-redux";
 
 export default function ProjectsGrid() {
     const navigate = useNavigate();
-    const user = useSelector((state) => state.auth.user);
     const projects = useSelector((state) => state.list.projects) || [];
 
-    const handleOpenProject = (projectName) => {
-        const username = user?.username || user?.name || "user";
+    const handleOpenProject = (projectKey) => {
 
         navigate(
-            `/ide/${username}/${projectName.toLowerCase().replace(/\s+/g, "-")}`
+            `/ide/${projectKey}`
         );
     };
 
@@ -52,7 +50,7 @@ export default function ProjectsGrid() {
                         </span>
 
                         <button
-                            onClick={() => handleOpenProject(project.project_name_raw)}
+                            onClick={() => handleOpenProject(project.key)}
                             className="px-4 py-2 bg-gray-800 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors border border-gray-700 hover:border-blue-500"
                         >
                             Open IDE

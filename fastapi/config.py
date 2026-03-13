@@ -24,7 +24,10 @@ WORKSPACE = "/opt/workspace"
 # settings = Settings()
 
 class Settings(BaseModel):
-    DATABASE_URL: str = os.getenv("DATABASE_URL")  # K8s Secret로 주입
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://root:jaewoo@localhost:3306/webide"
+    ) # K8s Secret로 주입
     SECRET_KEY: str = "jcolabjcolabjcolabjcolabjcolabjcolabjcolabjcolab1234"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

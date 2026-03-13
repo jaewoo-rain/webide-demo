@@ -1,12 +1,15 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/authSlice";
+import Cookies from "js-cookie";
 
 export default function Header() {
     const dispatch = useDispatch();
     const user = useSelector((state) => state.auth.user);
 
     const handleLogout = () => {
+        Cookies.remove("access_token");
+
         dispatch(logout());
     };
 

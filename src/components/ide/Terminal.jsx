@@ -6,8 +6,7 @@ import config from "../../config";
 import { useXtermMount } from "../../hooks/useXtermMount";
 
 export default function Terminal({
-    userName,
-    projectName,
+    projectKey,
     setReady = () => { },
     podName = null }
 ) {
@@ -19,7 +18,7 @@ export default function Terminal({
     // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
     // const wsUrl = `ws://${window.location.host}/fastapi/ws/terminal?pod_name=vnc-test`;
 
-    const wsUrl = config.wsUrl + `?user_name=${userName}&project_name=${projectName}&pod_name=${podName}`;
+    const wsUrl = config.wsUrl + `?key=${projectKey}&pod_name=${podName}`;
     let termReady = useXtermMount({ terminalRef, termInstanceRef })
 
 

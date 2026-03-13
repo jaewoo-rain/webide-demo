@@ -72,7 +72,7 @@ export default function LoginCard({
 
             dispatch(setProjects(projectList));
 
-            console.log("로그인 성공", projectList);
+            console.log("로그인 성공, 프로젝트 목록: ", projectList);
         } catch (error) {
             console.error("로그인 에러:", error);
             alert(error.message);

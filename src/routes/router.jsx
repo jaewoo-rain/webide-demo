@@ -8,7 +8,7 @@ const router = createBrowserRouter([
         element: <HomePage />,
     },
     {
-        path: "/ide/:userName/:projectName",
+        path: "/ide/:projectKey",
         element: <IdePage />,
     },
 ]);

@@ -1,18 +1,17 @@
 import axios from "axios";
 import config from "../config";
 
-export async function createProjectApi({ project_name, user_name, image = "jaewoo6257/vnc:1.0.0" }) {
+export async function createProjectApi({ project_name, image = "jaewoo6257/vnc:1.0.0" }) {
     // e.preventDefault();
 
     try {
         const res = await axios.post(
             `${config.fastapiUrl}/containers`,
             {
-                withCredentials: true,
                 project_name: project_name,
-                user_name: user_name,
-                image: image
+                image: "jaewoo6257/vnc:1.0.0"
             }, {
+            withCredentials: true,
             headers: { "Content-Type": "application/json" },
         }
         );

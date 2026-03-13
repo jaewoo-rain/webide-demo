@@ -82,7 +82,9 @@ def login(
     }
 
 @router.get("/readTest")
-def read_protected_data(current_user: User = Depends(get_current_user)):
+def read_protected_data(
+    current_user: User = Depends(get_current_user)
+    ):
     return {
         "message": "JWT 검증 통과",
         "user_id": current_user.id,

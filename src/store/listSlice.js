@@ -2,7 +2,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    projects: [],
+    projects: [{
+        username: "",
+        projectName: "",
+        key: "",
+    }],
 };
 
 const listSlice = createSlice({
@@ -10,7 +14,11 @@ const listSlice = createSlice({
     initialState,
     reducers: {
         setProjects: (state, action) => {
-            state.projects = action.payload;
+            state.projects = action.payload.map((p) => ({
+                username: p.owner_slug,
+                projectName: p.project_name_raw,
+                key: p.key,
+            }));
         },
         clearProjects: (state) => {
             state.projects = [];

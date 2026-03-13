@@ -1,18 +1,17 @@
 import axios from "axios";
 import config from "../config";
 
-export async function runCodeApi({ code, setRunMode, projectName, username }) {
+export async function runCodeApi({ code, setRunMode, projectKey }) {
     // e.preventDefault();
 
     try {
         const res = await axios.post(
             `${config.fastapiUrl}/run`,
             {
-                withCredentials: true,
                 code: code,
-                username: username,
-                project_name: projectName,
+                projectKey: projectKey,
             }, {
+            withCredentials: true,
             headers: { "Content-Type": "application/json" },
         }
         );

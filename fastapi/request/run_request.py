@@ -2,8 +2,7 @@ from pydantic import BaseModel
 
 class RunRequest(BaseModel):
     code: str
-    username:str
-    project_name: str
+    projectKey:str
     # vnc_url: str
     # ws_url: str
 

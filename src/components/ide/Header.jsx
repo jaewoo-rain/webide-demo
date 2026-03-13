@@ -1,12 +1,14 @@
 import { useSelector } from "react-redux";
 import { runCodeApi } from "../../api/runService";
+import { useNavigate } from "react-router-dom";
 
-export default function Header({ setRunMode, projectName, username }) {
+export default function Header({ setRunMode, projectKey }) {
 
     const code = useSelector((s) => s.project.code);
+    const navigator = useNavigate()
     const runCode = async () => {
         // console.log(`username=${username}, projectName=${projectName}`)
-        await runCodeApi({ code, setRunMode, projectName, username })
+        await runCodeApi({ code, setRunMode, projectKey })
     }
 
 
@@ -16,6 +18,8 @@ export default function Header({ setRunMode, projectName, username }) {
 
     function onBack() {
         console.log("목록으로 이동")
+        navigator("/")
+
     }
 
     return (
@@ -23,8 +27,7 @@ export default function Header({ setRunMode, projectName, username }) {
 
             {/* 이름 */}
             <div className="flex items-center">
-                <span className="font-['Pacifico'] text-xl text-white mr-4 shrink-0 whitespace-nowrap">Web-IDE ss</span>
-
+                <span className="font-['Pacifico'] text-xl text-white mr-4 shrink-0 whitespace-nowrap">Web-IDE</span>
             </div>
 
             {/* 프로젝트 */}
@@ -58,7 +61,6 @@ export default function Header({ setRunMode, projectName, username }) {
 
                 <button
                     onClick={() => { onBack() }}
-                    disabled={true}
                     className="flex items-center bg-[#3C3C3C] hover:bg-opacity-80 text-white px-3 py-1.5 rounded-button whitespace-nowrap disabled:opacity-50"
                 >
                     <span>목록으로</span>

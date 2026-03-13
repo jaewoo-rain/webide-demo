@@ -13,6 +13,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.2",
     "codemirror": "^5.65.20",
+    "js-cookie": "^3.0.5",
     "react": "^19.2.0",
     "react-codemirror2": "^9.0.1",
     "react-dom": "^19.2.0",
