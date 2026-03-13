@@ -90,3 +90,11 @@ def read_protected_data(
         "user_id": current_user.id,
         "username": current_user.username,
     }
+
+@router.post("/logout")
+def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user)
+    ):
+    response.delete_cookie("access_token")
+    return {"message": "logout"}

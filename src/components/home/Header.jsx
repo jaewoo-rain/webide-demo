@@ -2,14 +2,14 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/authSlice";
 import Cookies from "js-cookie";
+import { logoutApi } from "../../api/loginService";
 
 export default function Header() {
     const dispatch = useDispatch();
-    const user = useSelector((state) => state.auth.user);
+    const username = useSelector((state) => state.auth.username);
 
-    const handleLogout = () => {
-        Cookies.remove("access_token");
-
+    const handleLogout = async () => {
+        await logoutApi()
         dispatch(logout());
     };
 
@@ -29,10 +29,10 @@ export default function Header() {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                         <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
-                            {user?.name?.charAt(0) || "U"}
+                            {username?.charAt(0) || "U"}
                         </div>
                         <span className="hidden sm:inline-block font-medium">
-                            {user?.name || "User"}
+                            {username || "User"}
                         </span>
                     </div>
 

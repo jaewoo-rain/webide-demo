@@ -64,6 +64,7 @@ export default function LoginCard({
                 throw new Error("프로젝트 정보를 불러오지 못했습니다.");
             }
 
+            console.log(result.username)
             dispatch(
                 login({
                     username: result.username,

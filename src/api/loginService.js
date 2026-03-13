@@ -45,3 +45,21 @@ export async function signupApi({ username, password }) {
         }
     }
 }
+
+export async function logoutApi() {
+    try {
+        const res = await axios.post(
+            `${config.fastapiUrl}/auth/logout`,
+            {
+                headers: { "Content-Type": "application/json" },
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data.detail || "회원가입 중 오류가 발생했습니다.");
+        } else {
+            throw new Error(`네트워크 오류: ${e.message}`);
+        }
+    }
+}
