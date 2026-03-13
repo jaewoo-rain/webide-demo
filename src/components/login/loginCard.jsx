@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { login } from "../../store/authSlice";
 import { setProjects } from "../../store/listSlice";
-import { loginApi } from "../../api/loginService";
+import { loginApi, signupApi } from "../../api/loginService";
 import { projectListApi } from "../../api/projectService";
 import LoginHeader from "./LoginHeader";
 import LoginForm from "./LoginForm";
@@ -30,8 +30,24 @@ export default function LoginCard({
         }
 
         if (!isLogin) {
-            alert("회원가입은 아직 구현 전입니다.");
-            return;
+
+            try {
+
+                const result = await signupApi({
+                    username: userId,
+                    password,
+                });
+
+                console.log("회원가입 성공", result);
+
+            } catch (error) {
+                console.error("회원가입 에러:", error);
+                alert(error.message);
+            } finally {
+                setIsLogin(true);
+            }
+
+            return
         }
 
         try {
