@@ -14,6 +14,7 @@ class Project(Base):
     project_slug: Mapped[str] = mapped_column(String(50), nullable=False)
 
     key: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    vncUrl: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
 
     namespace: Mapped[str] = mapped_column(String(80), nullable=False)
     deploy_name: Mapped[str] = mapped_column(String(120), nullable=False)

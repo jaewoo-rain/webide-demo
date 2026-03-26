@@ -4,15 +4,6 @@ import Header from '../components/home/Header';
 import Main from '../components/home/Main';
 import LoginPage from './LoginPage';
 
-// export default function HomePage() {
-//   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-
-//   return (
-//     <>
-//       {isAuthenticated ? <ProjectListView /> : <AuthView />}
-//     </>
-//   );
-// }
 
 export default function HomePage() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);

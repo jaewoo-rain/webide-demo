@@ -50,7 +50,9 @@ export async function logoutApi() {
     try {
         const res = await axios.post(
             `${config.fastapiUrl}/auth/logout`,
+            {},
             {
+                withCredentials: true,
                 headers: { "Content-Type": "application/json" },
             }
         );

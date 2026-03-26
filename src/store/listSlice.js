@@ -6,6 +6,7 @@ const initialState = {
         username: "",
         projectName: "",
         key: "",
+        vncUrl: "",
     }],
 };
 
@@ -18,6 +19,7 @@ const listSlice = createSlice({
                 username: p.owner_slug,
                 projectName: p.project_name_raw,
                 key: p.key,
+                vncUrl: p.vncUrl
             }));
         },
         clearProjects: (state) => {

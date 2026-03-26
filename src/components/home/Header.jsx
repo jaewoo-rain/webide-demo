@@ -1,7 +1,6 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/authSlice";
-import Cookies from "js-cookie";
 import { logoutApi } from "../../api/loginService";
 
 export default function Header() {

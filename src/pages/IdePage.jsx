@@ -4,16 +4,21 @@ import Header from "../components/ide/Header";
 import Sidebar from "../components/ide/Slidebar";
 import Terminal from "../components/ide/Terminal";
 import { GuiModal } from "../components/ide/GuiModal";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 export default function IdePage() {
   const [runMode, setRunMode] = useState("cli");
   const [isReady, setReady] = useState(false);
   const { projectKey } = useParams();
+  const location = useLocation();
+  const vncUrl = location.state?.vncUrl;
 
   return (
     <div className="flex flex-col h-screen bg-[#252526]">
-      {runMode === "gui" && <GuiModal onClose={() => setRunMode("cli")} />}
+      {runMode === "gui" &&
+        <GuiModal onClose={() => setRunMode("cli")}
+          vncUrl={vncUrl}
+        />}
       <Header
         setRunMode={setRunMode}
         projectKey={projectKey}

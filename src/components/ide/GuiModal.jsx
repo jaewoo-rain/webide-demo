@@ -8,10 +8,8 @@
 
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
 
-export function GuiModal({ onClose }) {
-    const src = useSelector((s) => s.project.VNCSrc);
+export function GuiModal({ onClose, vncUrl }) {
     // ESC 키로 닫기
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -45,7 +43,7 @@ export function GuiModal({ onClose }) {
                             width: "1024px",
                             height: "800px",
                         }}
-                        src={src}
+                        src={vncUrl}
                     ></iframe>
                 </div>
             </div>

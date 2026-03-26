@@ -274,7 +274,7 @@ export default function Editor() {
         // 코드 변경 감지
         cm.on("change", (instance) => {
             const code = instance.getValue();
-            dispatch(setCode(code));
+            dispatch(setCode({ fileName: "main.py", code: code }));
             // 여기서 localStorage 저장 등 추가 가능
         });
 

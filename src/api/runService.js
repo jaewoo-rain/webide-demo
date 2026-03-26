@@ -5,6 +5,7 @@ export async function runCodeApi({ code, setRunMode, projectKey }) {
     // e.preventDefault();
 
     try {
+        console.log(code, projectKey)
         const res = await axios.post(
             `${config.fastapiUrl}/run`,
             {

@@ -15,15 +15,15 @@ export async function createProjectApi({ project_name, image = "jaewoo6257/vnc:1
             headers: { "Content-Type": "application/json" },
         }
         );
-        const data = res.data
-        console.log(
-            `pod_name:${data.pod_name}`,
-            `novnc_port:${data.novnc_port}`,
-            `namespace:${data.namespace}`,
-            `deploy_name:${data.deploy_name}`,
-            `svc_name:${data.svc_name}`,
-            `pvc_name:${data.pvc_name}"`
-        )
+        // const data = res.data
+        // console.log(
+        //     `pod_name:${data.pod_name}`,
+        //     `novnc_port:${data.novnc_port}`,
+        //     `namespace:${data.namespace}`,
+        //     `deploy_name:${data.deploy_name}`,
+        //     `svc_name:${data.svc_name}`,
+        //     `pvc_name:${data.pvc_name}"`
+        // )
         return res.data;
 
     } catch (e) {

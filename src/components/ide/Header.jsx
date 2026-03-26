@@ -4,10 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 export default function Header({ setRunMode, projectKey }) {
 
-    const code = useSelector((s) => s.project.code);
+    const code = useSelector((s) => s.project.files["main.py"].code);
     const navigator = useNavigate()
     const runCode = async () => {
-        // console.log(`username=${username}, projectName=${projectName}`)
         await runCodeApi({ code, setRunMode, projectKey })
     }
 

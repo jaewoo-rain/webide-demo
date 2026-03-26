@@ -15,7 +15,7 @@ from response.create_container_response import CreateContainerResponse
 from request.create_container_request import CreateContainerRequest
 from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PORTS, VNC_APP_LABEL, NAMESPACE, WORKSPACE)
 from kubernetes.client.rest import ApiException
-from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name)
+from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name, get_service_nodeport)
 from response.delete_container_response import DeleteContainerResponse
 from dto.save_file import (SaveFileRequest, SaveFileResponse)
 from repository.db import get_db
@@ -168,6 +168,10 @@ async def create_container(
     # pod_name 찾기
     pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
 
+    # vncUrl 찾기
+    port = get_service_nodeport(v1, NAMESPACE, svc_name)
+    vncUrl = f"http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo"
+
     # DB 저장하기
     obj = crud.create_project(db, {
         "user_name_raw": current_user.username,
@@ -180,6 +184,7 @@ async def create_container(
         "svc_name": svc_name,
         "pvc_name": pvc_name,
         "image": req.image,
+        "vncUrl": vncUrl,
     })
 
     return CreateContainerResponse(
@@ -247,15 +252,18 @@ def read_protected_data(
 ):
 
     projectList = crud.list_by_owner(db, current_user.username)
+    # projectList = crud.list_by_owner(db, "jaewoo")
 
     projectList = [
         {
             "owner_slug": p.owner_slug,
             "project_name_raw": p.project_name_raw,
-            "key": p.key
+            "key": p.key,
+            "vncUrl": p.vncUrl
         }
         for p in projectList
     ]
+
 
     return projectList
 # 이름 수정

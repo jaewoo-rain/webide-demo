@@ -141,3 +141,18 @@ def get_any_running_pod_name(v1: client.CoreV1Api, namespace: str, key: str) -> 
         if item.status and item.status.phase in ("Running", "Pending"):
             return item.metadata.name
     return None
+
+"""Service에서 NodePort 가져오기"""
+def get_service_nodeport(v1: client.CoreV1Api, namespace: str, svc_name: str) -> int:
+    try:
+        svc = v1.read_namespaced_service(name=svc_name, namespace=namespace)
+
+        if svc.spec and svc.spec.ports and len(svc.spec.ports) > 0:
+            return svc.spec.ports[0].node_port
+
+        raise HTTPException(status_code=500, detail="Service exists but no NodePort")
+
+    except ApiException as e:
+        if e.status == 404:
+            raise HTTPException(status_code=404, detail="Service not found")
+        raise

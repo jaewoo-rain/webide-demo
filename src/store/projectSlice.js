@@ -1,31 +1,54 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-
-let projectSlice = createSlice({
+const projectSlice = createSlice({
   name: "project",
   initialState: {
-    code: "",
+    projectName: "my-project",
     podName: "vnc-test",
-    VNCSrc: "http://210.117.181.56:30681/vnc.html?autoconnect=true&password=jaewoo"
+    VNCSrc: "http://210.117.181.56:3607/vnc.html?autoconnect=true&password=jaewoo",
+    activeFile: "main.py",
+    files: {
+      "main.py": {
+        code: "",
+      },
+    },
   },
+
   reducers: {
-    setCode(state, action) {
-      const code = action.payload;
-      state.code = code;
-    },
     initProject(state, action) {
-      const { podName, noVNCPort } = action.payload
-      state.podName = podName
-      state.noVNCPort = noVNCPort
+      const { projectName, podName, port } = action.payload;
+      state.projectName = projectName;
+      state.podName = podName;
+      state.VNCSrc = `http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo`;
     },
+
+    addFile(state, action) {
+      const { fileName, code = "" } = action.payload;
+      if (!state.files[fileName]) {
+        state.files[fileName] = { code };
+      }
+    },
+    // 파일 선택
+    setActiveFile(state, action) {
+      state.activeFile = action.payload;
+    },
+
+    setCode(state, action) {
+      const { fileName, code } = action.payload;
+      if (!state.files[fileName]) return;
+      state.files[fileName].code = code;
+    },
+
     setVncPort(state, action) {
       const port = action.payload;
-      state.VNCSrc = `http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo`
-    }
-  }
-})
+      state.VNCSrc = `http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo`;
+    },
+  },
+});
 
-export const { setCode, setVncPort } = projectSlice.actions;
+export const { initProject, addFile, setActiveFile, setCode, setVncPort } =
+  projectSlice.actions;
+
 export default projectSlice.reducer;
 
 /**
@@ -41,7 +64,7 @@ export default projectSlice.reducer;
 }
  */
 
-/** 
+/**
  * tree 구조2 구조/내용 분리하기
 {
   mode: 'cli',

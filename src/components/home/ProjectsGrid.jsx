@@ -19,8 +19,10 @@ export default function ProjectsGrid() {
         setProjectList(projects);
     }, [projects]);
 
-    const handleOpenProject = (projectKey) => {
-        navigate(`/ide/${projectKey}`);
+    const handleOpenProject = (projectKey, vncUrl) => {
+        navigate(`/ide/${projectKey}`, {
+            state: { vncUrl }
+        });
     };
 
     const handleEdit = (project) => {
@@ -110,7 +112,7 @@ export default function ProjectsGrid() {
                             </span>
 
                             <button
-                                onClick={() => handleOpenProject(project.key)}
+                                onClick={() => handleOpenProject(project.key, project.vncUrl)}
                                 className="px-4 py-2 bg-gray-800 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors border border-gray-700 hover:border-blue-500"
                             >
                                 Open IDE
