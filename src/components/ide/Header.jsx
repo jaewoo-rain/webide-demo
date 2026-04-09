@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 export default function Header({ setRunMode, projectKey }) {
 
-    const code = useSelector((s) => s.project.files["main.py"].code);
+    const currentFile = useSelector((s) => s.openPage.current);
+    const code = useSelector((s) => s.project.files[currentFile]?.code || "");
+
     const navigator = useNavigate()
     const runCode = async () => {
         await runCodeApi({ code, setRunMode, projectKey })

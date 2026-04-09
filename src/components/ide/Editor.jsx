@@ -1,166 +1,3 @@
-// import { useEffect, useRef } from "react"
-// import "./Editor.css"
-
-// import CodeMirror from "codemirror";
-// import "codemirror/lib/codemirror.css";
-// import "codemirror/theme/darcula.css";
-// import "codemirror/addon/edit/closebrackets";
-// // 언어 모드 (필요한 것만)
-// // import "codemirror/mode/javascript/javascript";
-// import "codemirror/mode/python/python";
-// import "codemirror/addon/edit/matchbrackets";
-// import "codemirror/addon/selection/active-line";
-// import "codemirror/addon/fold/foldgutter";
-// import "codemirror/addon/fold/foldcode";
-// import "codemirror/addon/fold/brace-fold";
-// import "codemirror/addon/fold/comment-fold";
-// import "codemirror/addon/fold/indent-fold";
-// import "codemirror/addon/fold/foldgutter.css";
-
-// import { useDispatch } from "react-redux";
-// import { setCode } from "../../store/projectSlice";
-// import { saveCodeApi } from "../../service/saveService";
-
-// export default function Editor() {
-//     const dispatch = useDispatch();
-
-//     const textareaRef = useRef(null);
-//     const editorRef = useRef(null);
-
-//     function onClickTab(page) {
-//         console.log(`${page}탭 클릭`);
-//     }
-
-//     function onCloseTab(page) {
-//         console.log(`${page}탭 닫음`);
-
-//     }
-
-//     function addTab() {
-//         console.log("페이지 추가 탭 클릭")
-//     }
-//     const saveCode = async () => {
-//         const cm = editorRef.current;
-//         if (!cm) return;
-
-//         cm.focus();
-//         cm.getInputField().blur();
-//         cm.focus();
-
-//         const code = cm.getValue();
-//         console.log("저장됨:", code);
-
-//         // 여기서 API 호출!
-//         await saveCodeApi({
-//             code: code,
-//         })
-//     }
-
-
-//     useEffect(() => {
-//         if (editorRef.current) return;
-
-//         editorRef.current = CodeMirror.fromTextArea(textareaRef.current, {
-//             value: "코드미러 시작",
-//             mode: "python",
-//             theme: "darcula",
-//             lineNumbers: true, // 왼쪽 라인 넘버 표시
-//             styleActiveLine: true, // 현재 라인 강조
-//             foldGutter: true, // 코드 접기 UI 활성화
-//             gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
-//             tabSize: 4, // 탭 하나의 공백 수
-//             lineWrapping: false, // 자동 줄바꿈
-//             inputStyle: "contenteditable", // 한글 IME 안정화
-//             autoCloseBrackets: true, // 괄호 자동 완성
-//             matchBrackets: true, // 짝 괄호 강조
-//             scrollbarStyle: "native"
-//         });
-
-//         // Ctrl+S 저장 코드
-//         editorRef.current.on("keydown", (cm, e) => {
-//             const isSave = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s";
-
-//             // IME 조합 중이면 저장 타이밍 꼬일 수 있어서 방지
-//             if (e.isComposing) return;
-
-//             if (isSave) {
-//                 e.preventDefault(); // 브라우저 기본 저장 막기
-//                 saveCode();
-//             }
-//         });
-
-//         // 코드 변경 감지
-//         editorRef.current.on("change", (instance) => {
-//             const code = instance.getValue();
-//             dispatch(setCode(code));
-//             // 변경될때마다 로컬 스토리지에 유저-프로젝트이름:코드 이런식으로
-//             // 저장하는것도 괜찮을 듯
-//         });
-
-//     }, [])
-
-//     return (
-//         <>
-//             <div className="bg-[#2D2D2D] flex text-sm">
-//                 <div key={1}
-//                     onClick={() => {
-//                         onClickTab(1);
-//                     }}
-//                     className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer active"
-//                 >
-//                     <div className="w-4 h-4 flex items-center justify-center mr-1">
-//                         <i className="ri-file-code-line text-[#519ABA]" />
-//                     </div>
-//                     <span>파일1</span>
-//                     <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-//                         onClick={(e) => {
-//                             e.stopPropagation();
-//                             onCloseTab(1);
-//                         }}>
-//                         <i className="ri-close-line" />
-//                     </button>
-//                 </div>
-
-//                 <div key={2}
-//                     onClick={() => {
-//                         onClickTab(2);
-//                     }}
-//                     className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer"
-//                 >
-//                     <div className="w-4 h-4 flex items-center justify-center mr-1">
-//                         <i className="ri-file-code-line text-[#519ABA]" />
-//                     </div>
-//                     <span>파일2</span>
-//                     <button className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-//                         onClick={(e) => {
-//                             e.stopPropagation();
-//                             onCloseTab(2);
-//                         }}>
-//                         <i className="ri-close-line" />
-//                     </button>
-//                 </div>
-
-//                 {/* 페이지 추가 버튼 */}
-//                 <button className="px-3 py-2 flex items-center"
-//                     onClick={() => {
-//                         addTab();
-//                     }}
-//                 >
-//                     <i className="ri-add-line" />
-//                 </button>
-
-//             </div>
-//             <div className="flex-1 overflow-auto code-editor h-full w-full">
-//                 <div className="h-full w-full">
-//                     <textarea
-//                         ref={textareaRef}
-//                     />
-//                 </div>
-//             </div>
-//         </>
-//     )
-// }
-
 import { useEffect, useRef } from "react";
 import "./Editor.css";
 
@@ -184,33 +21,30 @@ import "codemirror/addon/hint/show-hint";
 import "codemirror/addon/hint/show-hint.css";
 import "codemirror/addon/hint/anyword-hint";
 
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setCode } from "../../store/projectSlice";
-import { saveCodeApi } from "../../api/saveService";
+import { saveProjectApi, saveCodeApi } from "../../api/saveService";
 
-export default function Editor() {
+export default function Editor({ projectKey }) {
     const dispatch = useDispatch();
 
     const textareaRef = useRef(null);
     const editorRef = useRef(null);
+    const docsRef = useRef(new Map());
+    const changeHandlerRef = useRef(null);
 
-    function onClickTab(page) {
-        console.log(`${page}탭 클릭`);
-    }
+    const currentFile = useSelector((s) => s.openPage.current);
+    const currentCode = useSelector(
+        (s) => (currentFile ? s.project.files[currentFile]?.code ?? "" : "")
+    );
 
-    function onCloseTab(page) {
-        console.log(`${page}탭 닫음`);
-    }
-
-    function addTab() {
-        console.log("페이지 추가 탭 클릭");
-    }
+    const files = useSelector((s) => s.project.files);
 
     const saveCode = async () => {
         const cm = editorRef.current;
         if (!cm) return;
 
-        // IME/조합 이슈 완화용 포커스 토글 (기존 유지)
+        // 기존 IME 안정화 흐름 유지
         cm.focus();
         cm.getInputField().blur();
         cm.focus();
@@ -218,9 +52,18 @@ export default function Editor() {
         const code = cm.getValue();
         console.log("저장됨:", code);
 
-        await saveCodeApi({ code });
+        await saveCodeApi({
+            code,
+            fileName: currentFile,
+            key: projectKey
+        });
+
+        // await saveProjectApi({
+        //     files: files
+        // });
     };
 
+    // CodeMirror 1회 생성
     useEffect(() => {
         if (editorRef.current) return;
         if (!textareaRef.current) return;
@@ -235,21 +78,13 @@ export default function Editor() {
             gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
             tabSize: 4,
             lineWrapping: false,
-
-            // 기존 유지: 한글 IME 안정화 (환경에 따라 힌트 팝업 영향 줄 수 있음)
             inputStyle: "contenteditable",
-
             autoCloseBrackets: true,
             matchBrackets: true,
             scrollbarStyle: "native",
-
-            // Ctrl+Space로 자동완성
             extraKeys: {
                 "Ctrl-Space": "autocomplete",
             },
-
-            // 자동완성 옵션
-            // true 시 바로 자동으로 입력 됨
             hintOptions: {
                 completeSingle: false,
             },
@@ -257,12 +92,11 @@ export default function Editor() {
 
         editorRef.current = cm;
 
-        // Ctrl+S 저장 (기존 유지)
+        // Ctrl+S 저장
         cm.on("keydown", (cmInstance, e) => {
             const isSave =
                 (e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "s";
 
-            // IME 조합 중이면 저장 타이밍 꼬일 수 있어서 방지
             if (e.isComposing) return;
 
             if (isSave) {
@@ -271,14 +105,7 @@ export default function Editor() {
             }
         });
 
-        // 코드 변경 감지
-        cm.on("change", (instance) => {
-            const code = instance.getValue();
-            dispatch(setCode({ fileName: "main.py", code: code }));
-            // 여기서 localStorage 저장 등 추가 가능
-        });
-
-        // 타이핑 중 자동완성 팝업
+        // 자동완성
         cm.on("inputRead", (instance, changeObj) => {
             // 붙여넣기, 삭제, 포맷팅 제외 타이핑만 대상
             if (!changeObj || changeObj.origin !== "+input") return;
@@ -297,69 +124,73 @@ export default function Editor() {
             instance.showHint({ completeSingle: false });
         });
 
-        // 언마운트/리로드 시 정리 (StrictMode/라우팅 대비)
         return () => {
+            if (editorRef.current && changeHandlerRef.current) {
+                editorRef.current.off("change", changeHandlerRef.current);
+                changeHandlerRef.current = null;
+            }
+
             if (editorRef.current) {
                 editorRef.current.toTextArea();
                 editorRef.current = null;
             }
+
+            docsRef.current.clear();
         };
-    }, [dispatch]);
+    }, []);
+
+    // 탭 전환 시 문서 바꾸기
+    useEffect(() => {
+        const cm = editorRef.current;
+        if (!cm || !currentFile) return;
+
+        let doc = docsRef.current.get(currentFile);
+
+        if (!doc) {
+            doc = new CodeMirror.Doc(currentCode, "python");
+            docsRef.current.set(currentFile, doc);
+        }
+
+        // 이미 현재 editor가 같은 doc를 쓰고 있으면 swapDoc 금지
+        if (cm.getDoc() !== doc) {
+            if (changeHandlerRef.current) {
+                cm.off("change", changeHandlerRef.current);
+                changeHandlerRef.current = null;
+            }
+
+            cm.swapDoc(doc);
+
+            const onChange = () => {
+                const value = cm.getDoc().getValue();
+                dispatch(setCode({ fileName: currentFile, code: value }));
+            };
+
+            cm.on("change", onChange);
+            changeHandlerRef.current = onChange;
+        }
+    }, [currentFile, currentCode, dispatch]);
+
+    // 현재 파일 코드가 외부에서 바뀌었을 때 현재 doc에 반영
+    useEffect(() => {
+        const cm = editorRef.current;
+        if (!cm || !currentFile) return;
+
+        const doc = docsRef.current.get(currentFile);
+        if (!doc) return;
+
+        // 현재 문서 내용과 redux 값이 다를 때만 반영
+        if (doc.getValue() !== currentCode) {
+            const cursor = doc.getCursor();
+            doc.setValue(currentCode);
+            doc.setCursor(cursor);
+        }
+    }, [currentFile, currentCode]);
 
     return (
-        <>
-            <div className="bg-[#2D2D2D] flex text-sm">
-                <div
-                    key={1}
-                    onClick={() => onClickTab(1)}
-                    className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer active"
-                >
-                    <div className="w-4 h-4 flex items-center justify-center mr-1">
-                        <i className="ri-file-code-line text-[#519ABA]" />
-                    </div>
-                    <span>파일1</span>
-                    <button
-                        className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onCloseTab(1);
-                        }}
-                    >
-                        <i className="ri-close-line" />
-                    </button>
-                </div>
-
-                <div
-                    key={2}
-                    onClick={() => onClickTab(2)}
-                    className="file-tab px-3 py-2 flex items-center hover:bg-[#37373D] cursor-pointer"
-                >
-                    <div className="w-4 h-4 flex items-center justify-center mr-1">
-                        <i className="ri-file-code-line text-[#519ABA]" />
-                    </div>
-                    <span>파일2</span>
-                    <button
-                        className="ml-2 w-4 h-4 flex items-center justify-center opacity-50 hover:opacity-100"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onCloseTab(2);
-                        }}
-                    >
-                        <i className="ri-close-line" />
-                    </button>
-                </div>
-
-                {/* 페이지 추가 버튼 */}
-                <button className="px-3 py-2 flex items-center" onClick={addTab}>
-                    <i className="ri-add-line" />
-                </button>
+        <div className="flex-1 overflow-auto code-editor h-full w-full">
+            <div className="h-full w-full">
+                <textarea ref={textareaRef} />
             </div>
-
-            <div className="flex-1 overflow-auto code-editor h-full w-full">
-                <div className="h-full w-full">
-                    <textarea ref={textareaRef} />
-                </div>
-            </div>
-        </>
+        </div>
     );
 }

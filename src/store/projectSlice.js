@@ -1,19 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const projectSlice = createSlice({
-  name: "project",
-  initialState: {
-    projectName: "my-project",
-    podName: "vnc-test",
-    VNCSrc: "http://210.117.181.56:3607/vnc.html?autoconnect=true&password=jaewoo",
-    activeFile: "main.py",
-    files: {
-      "main.py": {
-        code: "",
-      },
+const initialState = {
+  projectName: "my-project",
+  podName: "vnc-test",
+  VNCSrc: "http://210.117.181.56:3607/vnc.html?autoconnect=true&password=jaewoo",
+
+  files: {
+    "main.py": {
+      name: "main.py",
+      code: 'print("hello")',
     },
   },
+};
 
+const projectSlice = createSlice({
+  name: "project",
+  initialState,
   reducers: {
     initProject(state, action) {
       const { projectName, podName, port } = action.payload;
@@ -25,12 +27,27 @@ const projectSlice = createSlice({
     addFile(state, action) {
       const { fileName, code = "" } = action.payload;
       if (!state.files[fileName]) {
-        state.files[fileName] = { code };
+        state.files[fileName] = {
+          name: fileName,
+          code,
+        };
       }
     },
-    // 파일 선택
-    setActiveFile(state, action) {
-      state.activeFile = action.payload;
+
+    deleteFile(state, action) {
+      const fileName = action.payload;
+      delete state.files[fileName];
+    },
+
+    renameFile(state, action) {
+      const { oldFileName, newFileName } = action.payload;
+      if (!state.files[oldFileName] || state.files[newFileName]) return;
+
+      state.files[newFileName] = {
+        ...state.files[oldFileName],
+        name: newFileName,
+      };
+      delete state.files[oldFileName];
     },
 
     setCode(state, action) {
@@ -46,41 +63,13 @@ const projectSlice = createSlice({
   },
 });
 
-export const { initProject, addFile, setActiveFile, setCode, setVncPort } =
-  projectSlice.actions;
+export const {
+  initProject,
+  addFile,
+  deleteFile,
+  renameFile,
+  setCode,
+  setVncPort,
+} = projectSlice.actions;
 
 export default projectSlice.reducer;
-
-/**
- * tree 구조1
- * {
-  "src": {
-    "main.py": "print('hello')",
-    "components": {
-      "header.js": "console.log('header')"
-    }
-  },
-  "README.md": "# 프로젝트 설명"
-}
- */
-
-/**
- * tree 구조2 구조/내용 분리하기
-{
-  mode: 'cli',
-  tree: {
-    id: 'root',
-    type:"folder"
-    children: [
-      { id: 'file1', type:"file" },
-      { id: 'folder1' type:"folder", children: [{ id: 'file2', type:"file"}] }
-    ]
-  },
-  fileMap: {
-    file1: { name: 'README.md', type: 'file', content: '# Hello' },
-    file2: { name: 'App.js', type: 'file', content: 'console.log()' },
-    folder1: { name: 'src', type: 'folder' },
-  }
-}
-
- */

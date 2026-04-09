@@ -4,7 +4,7 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from fastapi.middleware.cors import CORSMiddleware
 from utils.util_exec_run import exec_run
-from utils.util_create_file import create_file
+from utils.util_create_file import create_file, save_project
 from response.run_response import RunResponse
 from request.run_request import RunRequest
 import os
@@ -17,7 +17,12 @@ from config import (CONTAINER_ENV_DEFAULT, INTERNAL_NOVNC_PORT, ALLOWED_NOVNC_PO
 from kubernetes.client.rest import ApiException
 from utils.util_create_project import (slug, create_pvc, create_deployment, create_service_nodeport, get_any_running_pod_name, get_service_nodeport)
 from response.delete_container_response import DeleteContainerResponse
-from dto.save_file import (SaveFileRequest, SaveFileResponse)
+from dto.save_file import (
+    SaveFileRequest,
+    SaveFileResponse,
+    SaveProjectRequest,
+    SaveProjectResponse,
+)
 from repository.db import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -248,11 +253,11 @@ async def delete_container(
 @app.get("/containers")
 def read_protected_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
 
-    projectList = crud.list_by_owner(db, current_user.username)
-    # projectList = crud.list_by_owner(db, "jaewoo")
+    # projectList = crud.list_by_owner(db, current_user.username)
+    projectList = crud.list_by_owner(db, "jaewoo")
 
     projectList = [
         {
@@ -270,12 +275,37 @@ def read_protected_data(
 
 # 새로고침
 
-# 파일 저장
-# 코드랑 pod name 받아서create_file() 실행
+# 현재 파일 저장
 @app.post("/save", response_model=SaveFileResponse)
 async def save_file(req: SaveFileRequest):
-    exec_path = await create_file(req.pod_name, req.code, file_name=req.file_name, base_path=WORKSPACE)
+
+    v1 = client.CoreV1Api()
+    pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+
+    exec_path = await create_file(
+        pod_name=pod_name,
+        code=req.code,
+        file_name=req.file_name,
+        base_path=req.base_path,
+        path=req.path,
+        relative_path=req.relative_path,
+    )
     return SaveFileResponse(exec_path=exec_path)
+
+
+# 전체 프로젝트 저장
+@app.post("/saveProject", response_model=SaveProjectResponse)
+async def save_project_api(req: SaveProjectRequest):
+
+    v1 = client.CoreV1Api()
+    pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+
+    saved_files = await save_project(
+        pod_name=pod_name,
+        files=req.files,
+        base_path=req.base_path,
+    )
+    return SaveProjectResponse(saved_files=saved_files)
 
 # 프로젝트 불러오기
 @app.get("/load", response_model=loadDto.LoadFileResponse)
