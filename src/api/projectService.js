@@ -101,3 +101,53 @@ export async function loadProjectFilesApi({ key }) {
         throw new Error(`네트워크 오류: ${e.message}`);
     }
 }
+
+
+// 파일 이름 변경
+export async function renameFileApi({ key, oldRelativePath, newRelativePath }) {
+    try {
+        const res = await axios.post(
+            `${config.fastapiUrl}/rename`,
+            {
+                key,
+                old_relative_path: oldRelativePath,
+                new_relative_path: newRelativePath,
+                base_path: "/opt/workspace",
+            },
+            {
+                withCredentials: true,
+                headers: { "Content-Type": "application/json" },
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `파일 이름 변경 실패 (${e.response.status})`);
+        }
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}
+
+// 파일 삭제
+export async function deleteFileApi({ key, relativePath }) {
+    try {
+        const res = await axios.post(
+            `${config.fastapiUrl}/delete`,
+            {
+                key,
+                relative_path: relativePath,
+                base_path: "/opt/workspace",
+            },
+            {
+                withCredentials: true,
+                headers: { "Content-Type": "application/json" },
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `파일 삭제 실패 (${e.response.status})`);
+        }
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}

@@ -30,7 +30,7 @@ from config import settings
 from repository import projectRepository as crud
 from repository.db import Base, engine
 from repository.models.project import Project # 지우면 안됨
-from dto import project_dto as projectDto
+from dto.project import (RenameFileRequest, DeleteFileRequest)
 from dto.load_file import (LoadProjectFilesResponse, FileMapItem, FileNode)
 from pathlib import Path
 import uuid
@@ -426,7 +426,52 @@ async def load_project_files(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# 파일 이름 변경
+@app.post("/rename")
+async def rename_file(req: RenameFileRequest):
+    try:
+        v1 = client.CoreV1Api()
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+        if not pod_name:
+            raise HTTPException(status_code=404, detail="실행 중인 pod가 없습니다.")
 
+        old_path = os.path.join(req.base_path, req.old_relative_path)
+        new_path = os.path.join(req.base_path, req.new_relative_path)
+
+        parent_dir = os.path.dirname(new_path)
+
+        await exec_run(
+            pod_name,
+            ["bash", "-lc", f"mkdir -p '{parent_dir}' && mv '{old_path}' '{new_path}'"]
+        )
+
+        return {"message": "renamed"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 파일 삭제
+@app.post("/delete")
+async def delete_file(req: DeleteFileRequest):
+    try:
+        v1 = client.CoreV1Api()
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+        if not pod_name:
+            raise HTTPException(status_code=404, detail="실행 중인 pod가 없습니다.")
+
+        target_path = os.path.join(req.base_path, req.relative_path)
+
+        await exec_run(
+            pod_name,
+            ["bash", "-lc", f"rm -f '{target_path}'"]
+        )
+
+        return {"message": "deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 연결
 @app.websocket("/ws/terminal")

@@ -89,7 +89,7 @@ export default function IdePage() {
         )}
 
         <div className="w-64 shrink-0">
-          <Sidebar />
+          <Sidebar projectKey={projectKey} />
         </div>
 
         <div className="w-1 bg-[#333] cursor-col-resize" />
