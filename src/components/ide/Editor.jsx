@@ -5,8 +5,14 @@ import CodeMirror from "codemirror";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/darcula.css";
 
-import "codemirror/addon/edit/closebrackets";
 import "codemirror/mode/python/python";
+import "codemirror/mode/javascript/javascript";
+import "codemirror/mode/xml/xml";
+import "codemirror/mode/css/css";
+import "codemirror/mode/markdown/markdown";
+import "codemirror/mode/shell/shell";
+
+import "codemirror/addon/edit/closebrackets";
 import "codemirror/addon/edit/matchbrackets";
 import "codemirror/addon/selection/active-line";
 
@@ -15,6 +21,7 @@ import "codemirror/addon/fold/foldcode";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
 import "codemirror/addon/fold/indent-fold";
+import "codemirror/addon/fold/xml-fold";
 import "codemirror/addon/fold/foldgutter.css";
 
 import "codemirror/addon/hint/show-hint";
@@ -23,7 +30,19 @@ import "codemirror/addon/hint/anyword-hint";
 
 import { useDispatch, useSelector } from "react-redux";
 import { setCode } from "../../store/projectSlice";
-import { saveProjectApi, saveCodeApi } from "../../api/saveService";
+import { saveCodeApi } from "../../api/saveService";
+
+function getEditorMode(fileName = "") {
+    if (fileName.endsWith(".py")) return "python";
+    if (fileName.endsWith(".js")) return "javascript";
+    if (fileName.endsWith(".ts")) return "javascript";
+    if (fileName.endsWith(".json")) return { name: "javascript", json: true };
+    if (fileName.endsWith(".html")) return "xml";
+    if (fileName.endsWith(".css")) return "css";
+    if (fileName.endsWith(".md")) return "markdown";
+    if (fileName.endsWith(".sh")) return "shell";
+    return "python";
+}
 
 export default function Editor({ projectKey }) {
     const dispatch = useDispatch();
@@ -33,43 +52,38 @@ export default function Editor({ projectKey }) {
     const docsRef = useRef(new Map());
     const changeHandlerRef = useRef(null);
 
-    const currentFile = useSelector((s) => s.openPage.current);
-    const currentCode = useSelector(
-        (s) => (currentFile ? s.project.files[currentFile]?.code ?? "" : "")
-    );
+    const currentFileId = useSelector((s) => s.openPage.current);
+    const fileMap = useSelector((s) => s.project.files);
 
-    const files = useSelector((s) => s.project.files);
+    const currentFile = currentFileId ? fileMap[currentFileId] : null;
+    const currentContent = currentFile?.content ?? "";
 
-    const saveCode = async () => {
+    const saveCurrentFile = async () => {
         const cm = editorRef.current;
-        if (!cm) return;
+        if (!cm || !currentFile) return;
 
-        // 기존 IME 안정화 흐름 유지
-        cm.focus();
-        cm.getInputField().blur();
-        cm.focus();
+        try {
+            const code = cm.getValue();
 
-        const code = cm.getValue();
-        console.log("저장됨:", code);
+            await saveCodeApi({
+                code,
+                fileName: currentFile.name,
+                relativePath: currentFile.relative_path,
+                key: projectKey,
+            });
 
-        await saveCodeApi({
-            code,
-            fileName: currentFile,
-            key: projectKey
-        });
-
-        // await saveProjectApi({
-        //     files: files
-        // });
+            console.log("저장 성공:", currentFile.name);
+        } catch (error) {
+            console.error("저장 실패:", error);
+        }
     };
 
-    // CodeMirror 1회 생성
+    // CodeMirror는 textarea가 항상 렌더되므로 반드시 생성됨
     useEffect(() => {
         if (editorRef.current) return;
         if (!textareaRef.current) return;
 
         const cm = CodeMirror.fromTextArea(textareaRef.current, {
-            value: "코드미러 시작",
             mode: "python",
             theme: "darcula",
             lineNumbers: true,
@@ -77,6 +91,7 @@ export default function Editor({ projectKey }) {
             foldGutter: true,
             gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
             tabSize: 4,
+            indentUnit: 4,
             lineWrapping: false,
             inputStyle: "contenteditable",
             autoCloseBrackets: true,
@@ -84,6 +99,13 @@ export default function Editor({ projectKey }) {
             scrollbarStyle: "native",
             extraKeys: {
                 "Ctrl-Space": "autocomplete",
+                Tab: (cmInstance) => {
+                    if (cmInstance.somethingSelected()) {
+                        cmInstance.indentSelection("add");
+                    } else {
+                        cmInstance.replaceSelection("    ", "end");
+                    }
+                },
             },
             hintOptions: {
                 completeSingle: false,
@@ -92,34 +114,28 @@ export default function Editor({ projectKey }) {
 
         editorRef.current = cm;
 
-        // Ctrl+S 저장
         cm.on("keydown", (cmInstance, e) => {
             const isSave =
-                (e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "s";
+                (e.ctrlKey || e.metaKey) &&
+                e.key &&
+                e.key.toLowerCase() === "s";
 
             if (e.isComposing) return;
 
             if (isSave) {
                 e.preventDefault();
-                saveCode();
+                saveCurrentFile();
             }
         });
 
-        // 자동완성
         cm.on("inputRead", (instance, changeObj) => {
-            // 붙여넣기, 삭제, 포맷팅 제외 타이핑만 대상
             if (!changeObj || changeObj.origin !== "+input") return;
+            if (instance.state?.completionActive) return;
 
-            // 자동완성 이미 떠있으면 중복 호출 방지
-            if (instance.state && instance.state.completionActive) return;
-
-            // CodeMirror 이벤트에 isComposing이 항상 있진 않아서
-            // 저장 키처럼 e.isComposing 체크는 못하고, 보수적으로 토큰 길이로 제어
             const cur = instance.getCursor();
             const token = instance.getTokenAt(cur);
 
-            // 2글자 이상일 때만 (원하면 1로 낮추기 가능)
-            if (!token || !token.string || token.string.length < 2) return;
+            if (!token?.string || token.string.length < 2) return;
 
             instance.showHint({ completeSingle: false });
         });
@@ -139,19 +155,32 @@ export default function Editor({ projectKey }) {
         };
     }, []);
 
-    // 탭 전환 시 문서 바꾸기
     useEffect(() => {
         const cm = editorRef.current;
-        if (!cm || !currentFile) return;
+        if (!cm) return;
 
-        let doc = docsRef.current.get(currentFile);
+        if (!currentFileId || !currentFile) {
+            if (changeHandlerRef.current) {
+                cm.off("change", changeHandlerRef.current);
+                changeHandlerRef.current = null;
+            }
 
-        if (!doc) {
-            doc = new CodeMirror.Doc(currentCode, "python");
-            docsRef.current.set(currentFile, doc);
+            const emptyDoc = new CodeMirror.Doc("", "python");
+            cm.swapDoc(emptyDoc);
+            cm.setOption("mode", "python");
+            return;
         }
 
-        // 이미 현재 editor가 같은 doc를 쓰고 있으면 swapDoc 금지
+        let doc = docsRef.current.get(currentFileId);
+
+        if (!doc) {
+            doc = new CodeMirror.Doc(
+                currentContent,
+                getEditorMode(currentFile.name)
+            );
+            docsRef.current.set(currentFileId, doc);
+        }
+
         if (cm.getDoc() !== doc) {
             if (changeHandlerRef.current) {
                 cm.off("change", changeHandlerRef.current);
@@ -159,38 +188,65 @@ export default function Editor({ projectKey }) {
             }
 
             cm.swapDoc(doc);
+            cm.setOption("mode", getEditorMode(currentFile.name));
 
             const onChange = () => {
                 const value = cm.getDoc().getValue();
-                dispatch(setCode({ fileName: currentFile, code: value }));
+
+                dispatch(
+                    setCode({
+                        fileId: currentFileId,
+                        newContent: value,
+                    })
+                );
             };
 
             cm.on("change", onChange);
             changeHandlerRef.current = onChange;
         }
-    }, [currentFile, currentCode, dispatch]);
+    }, [currentFileId, currentFile, currentContent, dispatch]);
 
-    // 현재 파일 코드가 외부에서 바뀌었을 때 현재 doc에 반영
     useEffect(() => {
         const cm = editorRef.current;
-        if (!cm || !currentFile) return;
+        if (!cm || !currentFileId || !currentFile) return;
 
-        const doc = docsRef.current.get(currentFile);
+        const doc = docsRef.current.get(currentFileId);
         if (!doc) return;
 
-        // 현재 문서 내용과 redux 값이 다를 때만 반영
-        if (doc.getValue() !== currentCode) {
+        const editorValue = doc.getValue();
+        const reduxValue = currentContent ?? "";
+
+        if (editorValue !== reduxValue) {
             const cursor = doc.getCursor();
-            doc.setValue(currentCode);
-            doc.setCursor(cursor);
+            doc.setValue(reduxValue);
+
+            try {
+                doc.setCursor(cursor);
+            } catch { }
         }
-    }, [currentFile, currentCode]);
+    }, [currentFileId, currentFile, currentContent]);
+
+    useEffect(() => {
+        const existingIds = new Set(Object.keys(fileMap));
+
+        for (const fileId of docsRef.current.keys()) {
+            if (!existingIds.has(fileId)) {
+                docsRef.current.delete(fileId);
+            }
+        }
+    }, [fileMap]);
 
     return (
-        <div className="flex-1 overflow-auto code-editor h-full w-full">
+        <div className="relative flex-1 overflow-hidden code-editor h-full w-full bg-[#1E1E1E]">
             <div className="h-full w-full">
                 <textarea ref={textareaRef} />
             </div>
+
+            {!currentFile && (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm pointer-events-none bg-[#1E1E1E]">
+                    파일을 선택해주세요.
+                </div>
+            )}
         </div>
     );
 }

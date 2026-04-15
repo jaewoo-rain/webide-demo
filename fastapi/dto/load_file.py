@@ -1,35 +1,20 @@
-from pydantic import BaseModel
-from typing import Dict, List, Optional
-
-class LoadFileRequest(BaseModel):
-    pod_name: str
-
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional, Literal
 
 class FileNode(BaseModel):
     id: str
-    type: str
-    children: Optional[List['FileNode']] = None
+    name: str
+    type: Literal["file", "folder"]
+    children: List["FileNode"] = Field(default_factory=list)
 
 class FileMapItem(BaseModel):
+    id: str
     name: str
+    type: Literal["file", "folder"]
+    path: str
+    relative_path: str
     content: Optional[str] = None
-    type: str
-    path: Optional[str] = None
-    
-class LoadFileResponse(BaseModel):
+
+class LoadProjectFilesResponse(BaseModel):
     tree: FileNode
     fileMap: Dict[str, FileMapItem]
-
-
-
-
-
-
-
-
-
-
-
-
-
-

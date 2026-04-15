@@ -1,5 +1,5 @@
-docker build -t jaewoo6257/ide-demo-fastapi:echo .
-docker push jaewoo6257/ide-demo-fastapi:echo
+docker build -t jaewoo2/ide-demo-fastapi:echo .
+docker push jaewoo2/ide-demo-fastapi:echo
 
 적용
 kubectl apply -f fastapi-deploy.yaml
@@ -20,12 +20,14 @@ kubectl get deploy,rs,pod,svc,pvc -n webide-net | grep novnc || echo "novnc 리�
 
 ---
 webide-demo> 여기서 사용
-docker build -t jaewoo6257/webide-react:1.2.2 .
+docker build -t jaewoo2/webide-react:1.2.8 .
 docker build --no-cache -t jaewoo6257/webide-react:echo .
 
-docker push jaewoo6257/webide-react:1.2.2
+docker push jaewoo2/webide-react:1.2.8
 
 kubectl rollout restart deployment/webide-react -n webide-netㅀ
+
+kubectl apply -f react.yaml 
 ----
 
 mysql

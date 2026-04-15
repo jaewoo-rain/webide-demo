@@ -135,13 +135,73 @@
 
 //     )
 // }
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { addFile } from "../../store/projectSlice";
 import { openFile } from "../../store/openPageSlice";
 
+function makeFileId() {
+    return `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function TreeNode({ node, depth = 0, onOpenFile }) {
+    const [expanded, setExpanded] = useState(true);
+
+    const isFolder = node.type === "folder";
+
+    const handleClick = () => {
+        if (isFolder) {
+            setExpanded((prev) => !prev);
+        } else {
+            onOpenFile(node.id);
+        }
+    };
+
+    return (
+        <div>
+            <div
+                onClick={handleClick}
+                className="flex items-center py-1 px-2 hover:bg-[#37373D] rounded cursor-pointer text-white select-none"
+                style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            >
+                <div className="w-4 h-4 flex items-center justify-center mr-1">
+                    {isFolder ? (
+                        <i
+                            className={`${expanded ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line"} text-gray-400`}
+                        ></i>
+                    ) : (
+                        <i className="ri-file-code-line text-[#519ABA]"></i>
+                    )}
+                </div>
+
+                <span>{node.name || "root"}</span>
+            </div>
+
+            {isFolder && expanded && node.children?.length > 0 && (
+                <div>
+                    {node.children.map((child) => (
+                        <TreeNode
+                            key={child.id}
+                            node={child}
+                            depth={depth + 1}
+                            onOpenFile={onOpenFile}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Sidebar() {
     const dispatch = useDispatch();
-    const files = useSelector((s) => s.project.files);
+    const tree = useSelector((s) => s.project.tree);
+    const fileMap = useSelector((s) => s.project.files);
+
+    const fileNames = useMemo(
+        () => new Set(Object.values(fileMap).map((file) => file.name)),
+        [fileMap]
+    );
 
     function addNewFile() {
         let base = "new_file";
@@ -149,17 +209,28 @@ export default function Sidebar() {
         let index = 1;
         let fileName = `${base}${index}${ext}`;
 
-        while (files[fileName]) {
+        while (fileNames.has(fileName)) {
             index += 1;
             fileName = `${base}${index}${ext}`;
         }
 
-        dispatch(addFile({ fileName, code: "" }));
-        dispatch(openFile(fileName));
+        const id = makeFileId();
+
+        dispatch(
+            addFile({
+                id,
+                name: fileName,
+                path: `/opt/workspace/${fileName}`,
+                relative_path: fileName,
+                code: "",
+            })
+        );
+
+        dispatch(openFile(id));
     }
 
-    function openPage(fileName) {
-        dispatch(openFile(fileName));
+    function openPage(fileId) {
+        dispatch(openFile(fileId));
     }
 
     return (
@@ -177,18 +248,7 @@ export default function Sidebar() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2">
-                {Object.keys(files).map((fileName) => (
-                    <div
-                        key={fileName}
-                        onDoubleClick={() => openPage(fileName)}
-                        className="flex items-center py-1 px-2 hover:bg-[#37373D] rounded cursor-pointer text-white"
-                    >
-                        <div className="w-4 h-4 flex items-center justify-center mr-1">
-                            <i className="ri-file-code-line text-[#519ABA]"></i>
-                        </div>
-                        <span>{fileName}</span>
-                    </div>
-                ))}
+                <TreeNode node={tree} onOpenFile={openPage} />
             </div>
         </div>
     );

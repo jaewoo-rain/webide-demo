@@ -21,16 +21,16 @@ class ProjectFileItem(BaseModel):
     path: Optional[List[str]] = None
     relative_path: Optional[str] = None
 
+class SaveProjectFileItem(BaseModel):
+    name: Optional[str] = None
+    path: Optional[List[str]] = None
+    relative_path: Optional[str] = None
+    code: str = ""
 
 class SaveProjectRequest(BaseModel):
     key: str
     base_path: str = "/opt/workspace"
-    # 예시:
-    # {
-    #   "main.py": { "code": "print(1)" },
-    #   "src/app.py": { "code": "print(2)", "relative_path": "src/app.py" }
-    # }
-    files: Dict[str, Union[str, ProjectFileItem]]
+    files: List[SaveProjectFileItem]
 
 
 class SaveProjectResponse(BaseModel):

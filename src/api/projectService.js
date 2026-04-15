@@ -81,3 +81,23 @@ export async function projectListApi() {
         }
     }
 }
+
+// 프로젝트 파일 조회
+export async function loadProjectFilesApi({ key }) {
+    try {
+        const res = await axios.get(
+            `${config.fastapiUrl}/projects/${encodeURIComponent(key)}/files`,
+            {
+                withCredentials: true,
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            console.error("LOAD PROJECT FILES failed:", e.response.status, e.response.data);
+            throw new Error(e.response.data?.detail || `프로젝트 파일 불러오기 실패 (${e.response.status})`);
+        }
+        console.error("Network/Error:", e.message);
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}

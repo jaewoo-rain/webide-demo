@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import posixpath
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict, Union, Any
 
 from .util_exec_run import _exec_run
 
@@ -28,7 +28,10 @@ def _normalize_full_path(
 
     # base_path 밖으로 탈출하는 경로 차단
     normalized_base = posixpath.normpath(base_path)
-    if not normalized.startswith(normalized_base):
+    if not (
+        normalized == normalized_base
+        or normalized.startswith(normalized_base + "/")
+    ):
         raise ValueError("허용되지 않은 경로입니다.")
 
     return normalized
@@ -91,10 +94,37 @@ async def create_file(
     )
 
 
-def _extract_file_info(key: str, value: Union[str, dict]) -> tuple[str, str]:
+def _extract_file_info_from_item(item: Any) -> tuple[str, str]:
     """
-    SaveProjectRequest.files 항목을
-    (relative_path, code) 형태로 통일한다.
+    배열 기반 files의 각 항목을 (relative_path, code) 형태로 통일한다.
+
+    지원 형태 예시:
+    1) {"name": "main.py", "code": "..."}
+    2) {"name": "main.py", "path": ["src"], "code": "..."}
+    3) {"relative_path": "src/main.py", "code": "..."}
+    """
+    if not isinstance(item, dict):
+        raise ValueError("files의 각 항목은 dict 형태여야 합니다.")
+
+    code = item.get("code", "")
+    relative_path = item.get("relative_path")
+
+    if relative_path:
+        return relative_path, code
+
+    name = item.get("name")
+    path = item.get("path") or []
+
+    if not name:
+        raise ValueError("파일 항목에는 name 또는 relative_path가 필요합니다.")
+
+    rel = posixpath.join(*path, name) if path else name
+    return rel, code
+
+
+def _extract_file_info_from_legacy_dict(key: str, value: Union[str, dict]) -> tuple[str, str]:
+    """
+    이전 dict 기반 구조 호환용.
     """
     if isinstance(value, str):
         return key, value
@@ -112,33 +142,50 @@ def _extract_file_info(key: str, value: Union[str, dict]) -> tuple[str, str]:
         rel = posixpath.join(*path, name) if path else name
         return rel, code
 
-    # 마지막 fallback: key 자체를 경로로 사용
     return key, code
 
 
 def _save_project(
     pod_name: str,
-    files: Dict[str, Union[str, dict]],
+    files: Union[List[dict], Dict[str, Union[str, dict]]],
     base_path: str = "/workspace",
 ) -> list[str]:
     saved_files = []
 
-    for key, value in files.items():
-        relative_path, code = _extract_file_info(key, value)
+    # ✅ 새로운 배열 구조
+    if isinstance(files, list):
+        for item in files:
+            relative_path, code = _extract_file_info_from_item(item)
 
-        full_path = _normalize_full_path(
-            base_path=base_path,
-            relative_path=relative_path,
-        )
-        _write_file_to_pod(pod_name, full_path, code)
-        saved_files.append(full_path)
+            full_path = _normalize_full_path(
+                base_path=base_path,
+                relative_path=relative_path,
+            )
+            _write_file_to_pod(pod_name, full_path, code)
+            saved_files.append(full_path)
 
-    return saved_files
+        return saved_files
+
+    # ✅ 이전 dict 구조도 호환
+    if isinstance(files, dict):
+        for key, value in files.items():
+            relative_path, code = _extract_file_info_from_legacy_dict(key, value)
+
+            full_path = _normalize_full_path(
+                base_path=base_path,
+                relative_path=relative_path,
+            )
+            _write_file_to_pod(pod_name, full_path, code)
+            saved_files.append(full_path)
+
+        return saved_files
+
+    raise ValueError("files는 list 또는 dict 형태여야 합니다.")
 
 
 async def save_project(
     pod_name: str,
-    files: Dict[str, Union[str, dict]],
+    files: Union[List[dict], Dict[str, Union[str, dict]]],
     base_path: str = "/workspace",
 ) -> list[str]:
     return await asyncio.to_thread(

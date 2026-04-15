@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import Editor from "../components/ide/Editor";
 import Header from "../components/ide/Header";
 import Sidebar from "../components/ide/Slidebar";
@@ -6,13 +7,63 @@ import Terminal from "../components/ide/Terminal";
 import { GuiModal } from "../components/ide/GuiModal";
 import { useLocation, useParams } from "react-router-dom";
 import FileTabs from "../components/ide/FileTabs";
+import { loadProjectFilesApi } from "../api/projectService";
+import { initProject, setProjectFiles } from "../store/projectSlice";
+import { openFile, resetOpenPages } from "../store/openPageSlice";
 
 export default function IdePage() {
   const [runMode, setRunMode] = useState("cli");
   const [isReady, setReady] = useState(false);
+
   const { projectKey } = useParams();
   const location = useLocation();
+  const dispatch = useDispatch();
+
   const vncUrl = location.state?.vncUrl;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProject = async () => {
+      try {
+        dispatch(resetOpenPages());
+
+        dispatch(
+          initProject({
+            projectName: projectKey,
+            vncUrl: vncUrl ?? "",
+          })
+        );
+
+        const result = await loadProjectFilesApi({ key: projectKey });
+        if (!mounted) return;
+
+        dispatch(
+          setProjectFiles({
+            tree: result.tree,
+            fileMap: result.fileMap,
+          })
+        );
+
+        const firstFileId = Object.values(result.fileMap).find(
+          (item) => item.type === "file"
+        )?.id;
+
+        if (firstFileId) {
+          dispatch(openFile(firstFileId));
+        }
+      } catch (error) {
+        console.error("프로젝트 로드 실패:", error);
+        alert(error.message);
+      }
+    };
+
+    loadProject();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, projectKey, vncUrl]);
 
   return (
     <div className="flex flex-col h-screen bg-[#252526]">

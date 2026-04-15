@@ -31,7 +31,7 @@ from repository import projectRepository as crud
 from repository.db import Base, engine
 from repository.models.project import Project # 지우면 안됨
 from dto import project_dto as projectDto
-from dto import load_file as loadDto
+from dto.load_file import (LoadProjectFilesResponse, FileMapItem, FileNode)
 from pathlib import Path
 import uuid
 from routers.auth import router as auth_router
@@ -83,11 +83,23 @@ async def run(req: RunRequest):
         if not resp or not resp.is_open():
              raise HTTPException(400, detail="터미널 연결 안됨.")
     
-        # 파일 만들기
-        exec_path = await create_file(pod_name, req.code, file_name="main.py", base_path=WORKSPACE)
+        # 1. 프로젝트 전체 파일 저장
+        # req.files: List[FileItem]
+        # 각 FileItem은 name, code 를 가진다고 가정
+        saved_files = await save_project(
+            pod_name=pod_name,
+            files=[file.model_dump() for file in req.files],
+            base_path=WORKSPACE,
+        )
+        
+        # 2. 실행할 파일 경로 찾기
+        # entryFile: "main.py" 또는 "src/main.py"
+        exec_path = os.path.join(WORKSPACE, req.entryFile)
 
-        # 파일 실행하기
+        # 3. 실행 전 기존 동일 프로세스 종료
         await exec_run(pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
+
+        # 4. 실행하기
         resp.write_stdin(f"/bin/python3 '{exec_path}'\n")
 
         # cli, gui 구분하기
@@ -237,18 +249,6 @@ async def delete_container(
         pvc_name=pvc_name
     )
 
-# 프로젝트 목록 조회
-# @app.get("/containers", response_model=List[projectDto.ProjectSimpleOut])
-# @app.get("/containers")
-# def list_containers(
-#     user_name: str = Query(...), 
-#     db: Session = Depends(get_db)
-# ):
-#     owner = slug(user_name)
-#     result = crud.list_by_owner(db, owner)
-
-#     return result
-
 # 프로젝트 리스트 반환
 @app.get("/containers")
 def read_protected_data(
@@ -302,60 +302,129 @@ async def save_project_api(req: SaveProjectRequest):
 
     saved_files = await save_project(
         pod_name=pod_name,
-        files=req.files,
+        files=[file.model_dump() for file in req.files],
         base_path=req.base_path,
     )
     return SaveProjectResponse(saved_files=saved_files)
 
+
 # 프로젝트 불러오기
-@app.get("/load", response_model=loadDto.LoadFileResponse)
-async def load_file(req: loadDto.LoadFileRequest):
-    
+@app.get("/projects/{key}/files", response_model=LoadProjectFilesResponse)
+async def load_project_files(
+    key: str,
+    db: Session = Depends(get_db),
+):
     try:
-         # 1. 파일 목록 (find)
-        raw_output = await exec_run(req.pod_name,["bash", "-c", f"fine {WORKSPACE} -print0"])
-        if not raw_output:
-            return 0
-        
-        paths = [p for p in raw_output.split('\0') if p]
-        file_paths_blob = await exec_run(req.pod_name, ["bash", "-c", f"find {WORKSPACE} -type f -print0"])
-        file_paths_set = set(file_paths_blob.split('\0'))
+        v1 = client.CoreV1Api()
 
-        # 2. 파일 내용 (cat)
-        contents = {}
-        valid_paths = [p for p in file_paths_set if p]
-        if valid_paths:
-            delimiter = "---FILE-DELIMITER---"
-            # f-string 밖에서 경로 문자열을 먼저 만듭니다.
-            paths_quoted = " ".join([f'"{p}"' for p in valid_paths])
-            cmd = f"for f in {paths_quoted}; do cat \"$f\"; echo \"{delimiter}\"; done"
-            content_blob = await exec_run(req.pod_name, ["bash", "-c", cmd])
-            split_contents = content_blob.split(delimiter)
-            for i, path in enumerate(valid_paths):
-                if i < len(split_contents): contents[path] = split_contents[i].strip()
+        # DB에 프로젝트가 있는지 확인
+        project = crud.get_alive_by_key(db, key)
+        if not project:
+            raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
 
-        # 3. 트리 생성
-        file_map, nodes = {"root": {"name": "", "type": "folder"}}, {"root": {"id": "root", "type": "folder", "children": []}}
-        for path_str in sorted(paths):
-            p = Path(path_str)
-            if p == Path(WORKSPACE): continue
-            node_id, name = str(uuid.uuid4()), p.name
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
+        if not pod_name:
+            raise HTTPException(status_code=404, detail="실행 중인 pod가 없습니다.")
+
+        base_path = WORKSPACE
+
+        # 1) 전체 경로 수집
+        raw_paths = await exec_run(
+            pod_name,
+            ["bash", "-lc", f"find '{base_path}' -mindepth 1 -print0"]
+        )
+
+        if not raw_paths:
+            return LoadProjectFilesResponse(
+                tree=FileNode(id="root", name="", type="folder", children=[]),
+                fileMap={}
+            )
+
+        paths = [p for p in raw_paths.split("\0") if p]
+
+        # 2) 파일만 수집
+        raw_file_paths = await exec_run(
+            pod_name,
+            ["bash", "-lc", f"find '{base_path}' -type f -print0"]
+        )
+        file_paths = [p for p in raw_file_paths.split("\0") if p] if raw_file_paths else []
+        file_paths_set = set(file_paths)
+
+        # 3) 파일 내용 읽기
+        contents: dict[str, str] = {}
+        if file_paths:
+            delimiter = "__FILE_BOUNDARY_9f3c2a1b__"
+            quoted_paths = " ".join([f'"{p}"' for p in file_paths])
+            cmd = (
+                f"for f in {quoted_paths}; do "
+                f"cat \"$f\" 2>/dev/null || true; "
+                f"printf '\\n{delimiter}\\n'; "
+                f"done"
+            )
+            blob = await exec_run(pod_name, ["bash", "-lc", cmd])
+            split_contents = blob.split(f"\n{delimiter}\n")
+
+            for idx, path_str in enumerate(file_paths):
+                if idx < len(split_contents):
+                    contents[path_str] = split_contents[idx]
+
+        # 4) 트리 구성
+        root = {"id": "root", "name": "", "type": "folder", "children": [], "path": base_path}
+        nodes_by_path = {base_path: root}
+        file_map = {}
+
+        for abs_path in sorted(paths):
+            p = Path(abs_path)
+            name = p.name
             parent_path = str(p.parent)
-            parent_id = "root"
-            for nid, n in nodes.items():
-                if n.get("path") == parent_path: parent_id = nid; break
-            
-            is_file = path_str in file_paths_set
-            new_node = {"id": node_id, "type": "file" if is_file else "folder", "path": path_str}
-            if not is_file: new_node["children"] = []
-            nodes[node_id] = new_node
-            nodes[parent_id]["children"].append(new_node)
-            file_map[node_id] = {"name": name, "type": "file" if is_file else "folder", "path": path_str, "content": contents.get(path_str)}
 
-        for node in nodes.values(): node.pop("path", None)
-        return loadDto.LoadFileResponse(tree=nodes["root"], fileMap=file_map)
-    
-    except Exception as e: raise HTTPException(500, detail=str(e))
+            parent_node = nodes_by_path.get(parent_path)
+            if parent_node is None:
+                # 혹시 부모가 누락된 경우 방어
+                continue
+
+            node_id = str(uuid.uuid4())
+            node_type = "file" if abs_path in file_paths_set else "folder"
+
+            new_node = {
+                "id": node_id,
+                "name": name,
+                "type": node_type,
+                "children": [],
+                "path": abs_path,
+            }
+
+            parent_node["children"].append(new_node)
+            nodes_by_path[abs_path] = new_node
+
+            relative_path = str(Path(abs_path).relative_to(base_path))
+
+            file_map[node_id] = {
+                "id": node_id,
+                "name": name,
+                "type": node_type,
+                "path": abs_path,
+                "relative_path": relative_path,
+                "content": contents.get(abs_path) if node_type == "file" else None,
+            }
+
+        # 5) path 제거
+        def strip_path(node: dict):
+            node.pop("path", None)
+            for child in node.get("children", []):
+                strip_path(child)
+
+        strip_path(root)
+
+        return LoadProjectFilesResponse(
+            tree=FileNode(**root),
+            fileMap={k: FileMapItem(**v) for k, v in file_map.items()}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
