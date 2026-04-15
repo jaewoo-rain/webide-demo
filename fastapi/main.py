@@ -30,7 +30,7 @@ from config import settings
 from repository import projectRepository as crud
 from repository.db import Base, engine
 from repository.models.project import Project # 지우면 안됨
-from dto.project import (RenameFileRequest, DeleteFileRequest)
+from dto.project import (RenameFileRequest, DeleteFileRequest, CreateFolderRequest)
 from dto.load_file import (LoadProjectFilesResponse, FileMapItem, FileNode)
 from pathlib import Path
 import uuid
@@ -468,6 +468,50 @@ async def delete_file(req: DeleteFileRequest):
         )
 
         return {"message": "deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 폴더 만들기
+@app.post("/mkdir")
+async def create_folder(req: CreateFolderRequest):
+    try:
+        v1 = client.CoreV1Api()
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+        if not pod_name:
+            raise HTTPException(status_code=404, detail="실행 중인 pod가 없습니다.")
+
+        target_path = os.path.join(req.base_path, req.relative_path)
+
+        await exec_run(
+            pod_name,
+            ["bash", "-lc", f"mkdir -p '{target_path}'"]
+        )
+
+        return {"message": "folder created"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# 폴더 삭제
+@app.post("/delete-folder")
+async def delete_folder(req: DeleteFileRequest):
+    try:
+        v1 = client.CoreV1Api()
+        pod_name = get_any_running_pod_name(v1, NAMESPACE, req.key)
+        if not pod_name:
+            raise HTTPException(status_code=404, detail="실행 중인 pod가 없습니다.")
+
+        target_path = os.path.join(req.base_path, req.relative_path)
+
+        await exec_run(
+            pod_name,
+            ["bash", "-lc", f"rm -rf '{target_path}'"]
+        )
+
+        return {"message": "folder deleted"}
     except HTTPException:
         raise
     except Exception as e:

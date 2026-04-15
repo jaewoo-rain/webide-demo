@@ -13,6 +13,24 @@ const initialState = {
   files: {},
 };
 
+function insertNodeIntoTree(node, parentId, newNode) {
+  if (node.id === parentId) {
+    if (!node.children) node.children = [];
+    node.children.push(newNode);
+    return true;
+  }
+
+  if (!node.children) return false;
+
+  for (const child of node.children) {
+    if (insertNodeIntoTree(child, parentId, newNode)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 const projectSlice = createSlice({
   name: "project",
   initialState,
@@ -48,8 +66,31 @@ const projectSlice = createSlice({
       state.files = {};
     },
 
+    addFolder(state, action) {
+      const { id, name, path, relative_path, parentId = "root" } = action.payload;
+      if (state.files[id]) return;
+
+      state.files[id] = {
+        id,
+        name,
+        type: "folder",
+        path,
+        relative_path,
+        content: null,
+      };
+
+      const newNode = {
+        id,
+        name,
+        type: "folder",
+        children: [],
+      };
+
+      insertNodeIntoTree(state.tree, parentId, newNode);
+    },
+
     addFile(state, action) {
-      const { id, name, path, relative_path, code = "" } = action.payload;
+      const { id, name, path, relative_path, code = "", parentId = "root" } = action.payload;
       if (state.files[id]) return;
 
       state.files[id] = {
@@ -61,12 +102,14 @@ const projectSlice = createSlice({
         content: code,
       };
 
-      state.tree.children.push({
+      const newNode = {
         id,
         name,
         type: "file",
         children: [],
-      });
+      };
+
+      insertNodeIntoTree(state.tree, parentId, newNode);
     },
 
     setCode(state, action) {
@@ -108,9 +151,81 @@ const projectSlice = createSlice({
       updateNodeName(state.tree);
     },
 
+    renameFolder(state, action) {
+      const { folderId, newName } = action.payload;
+      const folder = state.files[folderId];
+      if (!folder) return;
+
+      const oldBase = folder.relative_path;
+
+      const parts = oldBase.split("/");
+      parts[parts.length - 1] = newName;
+
+      const newBase = parts.join("/");
+
+      // 🔥 모든 하위 경로 변경
+      for (const id in state.files) {
+        const file = state.files[id];
+
+        if (file.relative_path.startsWith(oldBase)) {
+          file.relative_path = file.relative_path.replace(oldBase, newBase);
+          file.path = `/opt/workspace/${file.relative_path}`;
+        }
+      }
+
+      // 트리 이름 변경
+      const updateNodeName = (node) => {
+        if (node.id === folderId) {
+          node.name = newName;
+          return true;
+        }
+
+        if (!node.children) return false;
+
+        for (const child of node.children) {
+          if (updateNodeName(child)) return true;
+        }
+        return false;
+      };
+
+      updateNodeName(state.tree);
+    },
+
     deleteFile(state, action) {
       const fileId = action.payload;
-      delete state.files[fileId];
+
+      const collectIds = (node, targetId) => {
+        if (node.id === targetId) {
+          const ids = [];
+
+          const walk = (n) => {
+            ids.push(n.id);
+            if (n.children) {
+              for (const child of n.children) {
+                walk(child);
+              }
+            }
+          };
+
+          walk(node);
+          return ids;
+        }
+
+        if (!node.children) return null;
+
+        for (const child of node.children) {
+          const result = collectIds(child, targetId);
+          if (result) return result;
+        }
+
+        return null;
+      };
+
+      const idsToDelete = collectIds(state.tree, fileId) ?? [fileId];
+
+      for (const id of idsToDelete) {
+        delete state.files[id];
+      }
 
       const removeNode = (node) => {
         if (!node.children) return;
@@ -135,11 +250,13 @@ export const {
   initProject,
   setProjectFiles,
   clearProject,
+  addFolder,
   addFile,
   setCode,
   renameFile,
   deleteFile,
   setVncUrl,
+  renameFolder,
 } = projectSlice.actions;
 
 export default projectSlice.reducer;

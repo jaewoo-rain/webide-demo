@@ -10,3 +10,9 @@ class DeleteFileRequest(BaseModel):
     key: str
     relative_path: str
     base_path: str = "/opt/workspace"
+
+
+class CreateFolderRequest(BaseModel):
+    key: str
+    relative_path: str
+    base_path: str = "/opt/workspace"

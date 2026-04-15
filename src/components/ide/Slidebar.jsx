@@ -1,19 +1,39 @@
-
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addFile } from "../../store/projectSlice";
-import { openFile } from "../../store/openPageSlice";
-import { renameFileApi, deleteFileApi } from "../../api/projectService";
-import { renameFile, deleteFile } from "../../store/projectSlice";
-import { closePage } from "../../store/openPageSlice";
+import { addFile, addFolder, renameFile, deleteFile, renameFolder } from "../../store/projectSlice";
+import { openFile, removeManyOpenPages } from "../../store/openPageSlice";
+import {
+    renameFileApi,
+    deleteFileApi,
+    createFolderApi,
+} from "../../api/projectService";
+import { saveCodeApi } from "../../api/saveService";
+import { deleteFolderApi } from "../../api/projectService";
 
-function makeFileId() {
-    return `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+function makeNodeId(prefix = "node") {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function TreeNode({ node, depth = 0, onOpenFile, onRenameFile, onDeleteFile }) {
+function joinRelativePath(parentRelativePath, name) {
+    if (!parentRelativePath) return name;
+    return `${parentRelativePath}/${name}`;
+}
+
+function TreeNode({
+    node,
+    depth = 0,
+    fileMap,
+    projectKey,
+    onOpenFile,
+    onRenameFile,
+    onDeleteFile,
+    onCreateFile,
+    onCreateFolder,
+}) {
     const [expanded, setExpanded] = useState(true);
     const isFolder = node.type === "folder";
+    const meta = fileMap[node.id];
 
     const handleClick = () => {
         if (isFolder) {
@@ -41,14 +61,67 @@ function TreeNode({ node, depth = 0, onOpenFile, onRenameFile, onDeleteFile }) {
                     <span className="truncate">{node.name || "root"}</span>
                 </div>
 
-                {!isFolder && node.id !== "root" && (
+                {isFolder && (
                     <div className="hidden group-hover:flex items-center gap-1 ml-2">
+
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateFile(node.id);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                            title="파일 생성"
+                        >
+                            <i className="ri-file-add-line"></i>
+                        </button>
+
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCreateFolder(node.id);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                            title="폴더 생성"
+                        >
+                            <i className="ri-folder-add-line"></i>
+                        </button>
+
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onRenameFile(node.id);
                             }}
                             className="text-gray-400 hover:text-white"
+                            title="폴더 이름 변경"
+                        >
+                            <i className="ri-edit-line"></i>
+                        </button>
+
+                        {node.id !== "root" && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteFile(node.id);
+                                }}
+                                className="text-gray-400 hover:text-red-400"
+                                title="폴더 삭제"
+                            >
+                                <i className="ri-delete-bin-line"></i>
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {!isFolder && node.id !== "root" && (
+                    <div className="hidden group-hover:flex items-center gap-1 ml-2">
+
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onRenameFile(node.id);
+                            }}
+                            className="text-gray-400 hover:text-white"
+                            title="이름 변경"
                         >
                             <i className="ri-edit-line"></i>
                         </button>
@@ -59,6 +132,7 @@ function TreeNode({ node, depth = 0, onOpenFile, onRenameFile, onDeleteFile }) {
                                 onDeleteFile(node.id);
                             }}
                             className="text-gray-400 hover:text-red-400"
+                            title="삭제"
                         >
                             <i className="ri-delete-bin-line"></i>
                         </button>
@@ -73,9 +147,13 @@ function TreeNode({ node, depth = 0, onOpenFile, onRenameFile, onDeleteFile }) {
                             key={child.id}
                             node={child}
                             depth={depth + 1}
+                            fileMap={fileMap}
+                            projectKey={projectKey}
                             onOpenFile={onOpenFile}
                             onRenameFile={onRenameFile}
                             onDeleteFile={onDeleteFile}
+                            onCreateFile={onCreateFile}
+                            onCreateFolder={onCreateFolder}
                         />
                     ))}
                 </div>
@@ -88,11 +166,22 @@ export default function Sidebar({ projectKey }) {
     const dispatch = useDispatch();
     const tree = useSelector((s) => s.project.tree);
     const fileMap = useSelector((s) => s.project.files);
-    const openTabs = useSelector((s) => s.openPage.open);
-    const current = useSelector((s) => s.openPage.current);
 
     const fileNames = useMemo(
-        () => new Set(Object.values(fileMap).map((file) => file.name)),
+        () => new Set(
+            Object.values(fileMap)
+                .filter((item) => item.type === "file")
+                .map((file) => file.relative_path)
+        ),
+        [fileMap]
+    );
+
+    const folderNames = useMemo(
+        () => new Set(
+            Object.values(fileMap)
+                .filter((item) => item.type === "folder")
+                .map((folder) => folder.relative_path)
+        ),
         [fileMap]
     );
 
@@ -104,7 +193,7 @@ export default function Sidebar({ projectKey }) {
         const file = fileMap[fileId];
         if (!file) return;
 
-        const newName = prompt("새 파일 이름", file.name);
+        const newName = prompt("새 이름", file.name);
         if (!newName || newName === file.name) return;
 
         try {
@@ -119,7 +208,12 @@ export default function Sidebar({ projectKey }) {
                 newRelativePath,
             });
 
-            dispatch(renameFile({ fileId, newName }));
+            if (file.type === "folder") {
+                dispatch(renameFolder({ folderId: fileId, newName }));
+            } else {
+                dispatch(renameFile({ fileId, newName }));
+            }
+
         } catch (e) {
             alert(e.message);
         }
@@ -129,58 +223,162 @@ export default function Sidebar({ projectKey }) {
         const file = fileMap[fileId];
         if (!file) return;
 
-        const ok = confirm(`${file.name} 파일을 삭제할까요?`);
+        const isFolder = file.type === "folder";
+        const ok = confirm(
+            isFolder
+                ? `${file.name} 폴더와 내부 내용을 모두 삭제할까요?`
+                : `${file.name} 파일을 삭제할까요?`
+        );
         if (!ok) return;
 
         try {
-            await deleteFileApi({
-                key: projectKey,
-                relativePath: file.relative_path,
-            });
+            const idsToRemove = collectChildIds(tree, fileId);
+
+            if (isFolder) {
+                await deleteFolderApi({
+                    key: projectKey,
+                    relativePath: file.relative_path,
+                });
+            } else {
+                await deleteFileApi({
+                    key: projectKey,
+                    relativePath: file.relative_path,
+                });
+            }
 
             dispatch(deleteFile(fileId));
-            dispatch(closePage(fileId));
+            dispatch(removeManyOpenPages(idsToRemove));
         } catch (e) {
             alert(e.message);
         }
     }
 
-    function addNewFile() {
+    async function handleCreateFile(parentId = "root") {
+        const parent = parentId === "root" ? null : fileMap[parentId];
+        const parentRelativePath = parent?.relative_path ?? "";
+
         let base = "new_file";
         let ext = ".py";
         let index = 1;
         let fileName = `${base}${index}${ext}`;
+        let candidateRelativePath = joinRelativePath(parentRelativePath, fileName);
 
-        while (fileNames.has(fileName)) {
+        while (fileNames.has(candidateRelativePath)) {
             index += 1;
             fileName = `${base}${index}${ext}`;
+            candidateRelativePath = joinRelativePath(parentRelativePath, fileName);
         }
 
-        const id = makeFileId();
-
-        dispatch(
-            addFile({
-                id,
-                name: fileName,
-                path: `/opt/workspace/${fileName}`,
-                relative_path: fileName,
+        try {
+            await saveCodeApi({
                 code: "",
-            })
-        );
+                fileName,
+                relativePath: candidateRelativePath,
+                key: projectKey,
+            });
 
-        dispatch(openFile(id));
+            const id = makeNodeId("file");
+
+            dispatch(
+                addFile({
+                    id,
+                    name: fileName,
+                    path: `/opt/workspace/${candidateRelativePath}`,
+                    relative_path: candidateRelativePath,
+                    code: "",
+                    parentId,
+                })
+            );
+
+            dispatch(openFile(id));
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    async function handleCreateFolder(parentId = "root") {
+        const parent = parentId === "root" ? null : fileMap[parentId];
+        const parentRelativePath = parent?.relative_path ?? "";
+
+        let base = "new_folder";
+        let index = 1;
+        let folderName = `${base}${index}`;
+        let candidateRelativePath = joinRelativePath(parentRelativePath, folderName);
+
+        while (folderNames.has(candidateRelativePath)) {
+            index += 1;
+            folderName = `${base}${index}`;
+            candidateRelativePath = joinRelativePath(parentRelativePath, folderName);
+        }
+
+        try {
+            await createFolderApi({
+                key: projectKey,
+                relativePath: candidateRelativePath,
+            });
+
+            const id = makeNodeId("folder");
+
+            dispatch(
+                addFolder({
+                    id,
+                    name: folderName,
+                    path: `/opt/workspace/${candidateRelativePath}`,
+                    relative_path: candidateRelativePath,
+                    parentId,
+                })
+            );
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    function collectChildIds(node, targetId) {
+        if (node.id === targetId) {
+            const ids = [];
+
+            const walk = (n) => {
+                ids.push(n.id);
+                if (n.children) {
+                    for (const child of n.children) {
+                        walk(child);
+                    }
+                }
+            };
+
+            walk(node);
+            return ids;
+        }
+
+        if (!node.children) return [];
+
+        for (const child of node.children) {
+            const result = collectChildIds(child, targetId);
+            if (result.length > 0) return result;
+        }
+
+        return [];
     }
 
     return (
         <div className="w-64 bg-[#252526] border-r border-[#333] flex flex-col">
             <div className="flex items-center justify-between p-2 border-b border-[#333]">
                 <span className="font-semibold text-white">파일 탐색기</span>
-                <div className="flex">
+                <div className="flex gap-1">
                     <button
                         className="w-6 h-6 flex items-center justify-center text-[#D4D4D4] hover:bg-[#3C3C3C]"
-                        onClick={addNewFile}
+                        onClick={() => handleCreateFile("root")}
+                        title="루트 파일 생성"
                     >
                         <i className="ri-file-add-line"></i>
+                    </button>
+
+                    <button
+                        className="w-6 h-6 flex items-center justify-center text-[#D4D4D4] hover:bg-[#3C3C3C]"
+                        onClick={() => handleCreateFolder("root")}
+                        title="루트 폴더 생성"
+                    >
+                        <i className="ri-folder-add-line"></i>
                     </button>
                 </div>
             </div>
@@ -188,9 +386,14 @@ export default function Sidebar({ projectKey }) {
             <div className="flex-1 overflow-y-auto p-2">
                 <TreeNode
                     node={tree}
+                    depth={0}
+                    fileMap={fileMap}
+                    projectKey={projectKey}
                     onOpenFile={openPage}
                     onRenameFile={handleRename}
                     onDeleteFile={handleDelete}
+                    onCreateFile={handleCreateFile}
+                    onCreateFolder={handleCreateFolder}
                 />
             </div>
         </div>

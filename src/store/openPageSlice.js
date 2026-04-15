@@ -73,8 +73,19 @@ const openPageSlice = createSlice({
             state.current = null;
             state.open = [];
         },
+
+        // 폴더 삭제시 그 안에 열려있던 탭 다 닫기
+        removeManyOpenPages(state, action) {
+            const idsToRemove = new Set(action.payload);
+
+            state.open = state.open.filter((id) => !idsToRemove.has(id));
+
+            if (state.current && idsToRemove.has(state.current)) {
+                state.current = state.open.length > 0 ? state.open[state.open.length - 1] : null;
+            }
+        }
     },
 });
 
-export const { openFile, setCurrentPage, closePage, resetOpenPages } = openPageSlice.actions;
+export const { openFile, setCurrentPage, closePage, resetOpenPages, removeManyOpenPages } = openPageSlice.actions;
 export default openPageSlice.reducer;

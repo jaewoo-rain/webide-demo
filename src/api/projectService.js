@@ -151,3 +151,52 @@ export async function deleteFileApi({ key, relativePath }) {
         throw new Error(`네트워크 오류: ${e.message}`);
     }
 }
+
+// 폴더 생성
+export async function createFolderApi({ key, relativePath }) {
+    try {
+        const res = await axios.post(
+            `${config.fastapiUrl}/mkdir`,
+            {
+                key,
+                relative_path: relativePath,
+                base_path: "/opt/workspace",
+            },
+            {
+                withCredentials: true,
+                headers: { "Content-Type": "application/json" },
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `폴더 생성 실패 (${e.response.status})`);
+        }
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}
+
+
+// 폴더 삭제
+export async function deleteFolderApi({ key, relativePath }) {
+    try {
+        const res = await axios.post(
+            `${config.fastapiUrl}/delete-folder`,
+            {
+                key,
+                relative_path: relativePath,
+                base_path: "/opt/workspace",
+            },
+            {
+                withCredentials: true,
+                headers: { "Content-Type": "application/json" },
+            }
+        );
+        return res.data;
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `폴더 삭제 실패 (${e.response.status})`);
+        }
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}
