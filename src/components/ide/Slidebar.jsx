@@ -1,15 +1,20 @@
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addFile, addFolder, renameFile, deleteFile, renameFolder } from "../../store/projectSlice";
+import {
+    addFile,
+    addFolder,
+    renameFile,
+    deleteFile,
+    renameFolder,
+} from "../../store/projectSlice";
 import { openFile, removeManyOpenPages } from "../../store/openPageSlice";
 import {
     renameFileApi,
     deleteFileApi,
     createFolderApi,
+    deleteFolderApi,
 } from "../../api/projectService";
 import { saveCodeApi } from "../../api/saveService";
-import { deleteFolderApi } from "../../api/projectService";
-
 
 function makeNodeId(prefix = "node") {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -20,28 +25,58 @@ function joinRelativePath(parentRelativePath, name) {
     return `${parentRelativePath}/${name}`;
 }
 
+function compareNodeNames(aName = "", bName = "") {
+    return aName.localeCompare(bName, undefined, {
+        numeric: true,
+        sensitivity: "base",
+    });
+}
+
+function getParentRelativePath(relativePath = "") {
+    const parts = relativePath.split("/");
+    parts.pop();
+    return parts.join("/");
+}
+
 function TreeNode({
     node,
     depth = 0,
     fileMap,
-    projectKey,
     onOpenFile,
-    onRenameFile,
+    onRenameStart,
     onDeleteFile,
     onCreateFile,
     onCreateFolder,
+    editingId,
+    editingName,
+    setEditingName,
+    onRenameSubmit,
+    onRenameCancel,
 }) {
     const [expanded, setExpanded] = useState(true);
     const isFolder = node.type === "folder";
-    const meta = fileMap[node.id];
+    const isEditing = editingId === node.id;
 
     const handleClick = () => {
+        if (isEditing) return;
+
         if (isFolder) {
             setExpanded((prev) => !prev);
         } else {
             onOpenFile(node.id);
         }
     };
+
+    // 폴더 / 파일 정렬
+    const sortedChildren = [...(node.children ?? [])].sort((a, b) => {
+        // 1) 폴더 먼저
+        if (a.type !== b.type) {
+            return a.type === "folder" ? -1 : 1;
+        }
+
+        // 2) 같은 타입이면 자연 정렬
+        return compareNodeNames(a.name || "", b.name || "");
+    });
 
     return (
         <div>
@@ -50,20 +85,36 @@ function TreeNode({
                 style={{ paddingLeft: `${depth * 12 + 8}px` }}
             >
                 <div onClick={handleClick} className="flex items-center flex-1 min-w-0">
-                    <div className="w-4 h-4 flex items-center justify-center mr-1">
+                    <div className="w-4 h-4 flex items-center justify-center mr-1 shrink-0">
                         {isFolder ? (
-                            <i className={`${expanded ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line"} text-gray-400`}></i>
+                            <i
+                                className={`${expanded ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line"} text-gray-400`}
+                            ></i>
                         ) : (
                             <i className="ri-file-code-line text-[#519ABA]"></i>
                         )}
                     </div>
 
-                    <span className="truncate">{node.name || "root"}</span>
+                    {isEditing ? (
+                        <input
+                            autoFocus
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") onRenameSubmit(node.id);
+                                if (e.key === "Escape") onRenameCancel();
+                            }}
+                            onBlur={() => onRenameSubmit(node.id)}
+                            className="flex-1 min-w-0 bg-[#1E1E1E] border border-[#555] rounded px-2 py-0.5 text-sm text-white outline-none"
+                        />
+                    ) : (
+                        <span className="truncate">{node.name || "root"}</span>
+                    )}
                 </div>
 
-                {isFolder && (
-                    <div className="hidden group-hover:flex items-center gap-1 ml-2">
-
+                {!isEditing && isFolder && (
+                    <div className="hidden group-hover:flex items-center gap-1 ml-2 shrink-0">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -86,16 +137,18 @@ function TreeNode({
                             <i className="ri-folder-add-line"></i>
                         </button>
 
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onRenameFile(node.id);
-                            }}
-                            className="text-gray-400 hover:text-white"
-                            title="폴더 이름 변경"
-                        >
-                            <i className="ri-edit-line"></i>
-                        </button>
+                        {node.id !== "root" && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRenameStart(node.id);
+                                }}
+                                className="text-gray-400 hover:text-white"
+                                title="폴더 이름 변경"
+                            >
+                                <i className="ri-edit-line"></i>
+                            </button>
+                        )}
 
                         {node.id !== "root" && (
                             <button
@@ -112,13 +165,12 @@ function TreeNode({
                     </div>
                 )}
 
-                {!isFolder && node.id !== "root" && (
-                    <div className="hidden group-hover:flex items-center gap-1 ml-2">
-
+                {!isEditing && !isFolder && node.id !== "root" && (
+                    <div className="hidden group-hover:flex items-center gap-1 ml-2 shrink-0">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onRenameFile(node.id);
+                                onRenameStart(node.id);
                             }}
                             className="text-gray-400 hover:text-white"
                             title="이름 변경"
@@ -140,20 +192,24 @@ function TreeNode({
                 )}
             </div>
 
-            {isFolder && expanded && node.children?.length > 0 && (
+            {isFolder && expanded && sortedChildren.length > 0 && (
                 <div>
-                    {node.children.map((child) => (
+                    {sortedChildren.map((child) => (
                         <TreeNode
                             key={child.id}
                             node={child}
                             depth={depth + 1}
                             fileMap={fileMap}
-                            projectKey={projectKey}
                             onOpenFile={onOpenFile}
-                            onRenameFile={onRenameFile}
+                            onRenameStart={onRenameStart}
                             onDeleteFile={onDeleteFile}
                             onCreateFile={onCreateFile}
                             onCreateFolder={onCreateFolder}
+                            editingId={editingId}
+                            editingName={editingName}
+                            setEditingName={setEditingName}
+                            onRenameSubmit={onRenameSubmit}
+                            onRenameCancel={onRenameCancel}
                         />
                     ))}
                 </div>
@@ -167,34 +223,98 @@ export default function Sidebar({ projectKey }) {
     const tree = useSelector((s) => s.project.tree);
     const fileMap = useSelector((s) => s.project.files);
 
-    const fileNames = useMemo(
-        () => new Set(
-            Object.values(fileMap)
-                .filter((item) => item.type === "file")
-                .map((file) => file.relative_path)
-        ),
-        [fileMap]
-    );
-
-    const folderNames = useMemo(
-        () => new Set(
-            Object.values(fileMap)
-                .filter((item) => item.type === "folder")
-                .map((folder) => folder.relative_path)
-        ),
-        [fileMap]
-    );
+    const [editingId, setEditingId] = useState(null);
+    const [editingName, setEditingName] = useState("");
 
     function openPage(fileId) {
         dispatch(openFile(fileId));
     }
 
-    async function handleRename(fileId) {
+    function collectChildIds(node, targetId) {
+        if (node.id === targetId) {
+            const ids = [];
+
+            const walk = (n) => {
+                ids.push(n.id);
+                if (n.children) {
+                    for (const child of n.children) {
+                        walk(child);
+                    }
+                }
+            };
+
+            walk(node);
+            return ids;
+        }
+
+        if (!node.children) return [];
+
+        for (const child of node.children) {
+            const result = collectChildIds(child, targetId);
+            if (result.length > 0) return result;
+        }
+
+        return [];
+    }
+
+    function getSiblingNames(targetId) {
+        const target = fileMap[targetId];
+        if (!target) return new Set();
+
+        const parentRelativePath = getParentRelativePath(target.relative_path);
+
+        return new Set(
+            Object.values(fileMap)
+                .filter((item) => item.id !== targetId)
+                .filter((item) => getParentRelativePath(item.relative_path) === parentRelativePath)
+                .map((item) => item.name)
+        );
+    }
+
+    function getChildNamesOfParent(parentId = "root") {
+        const parent = parentId === "root" ? null : fileMap[parentId];
+        const parentRelativePath = parent?.relative_path ?? "";
+
+        return new Set(
+            Object.values(fileMap)
+                .filter((item) => getParentRelativePath(item.relative_path) === parentRelativePath)
+                .map((item) => item.name)
+        );
+    }
+
+    function handleRenameStart(fileId) {
         const file = fileMap[fileId];
         if (!file) return;
 
-        const newName = prompt("새 이름", file.name);
-        if (!newName || newName === file.name) return;
+        setEditingId(fileId);
+        setEditingName(file.name);
+    }
+
+    function handleRenameCancel() {
+        setEditingId(null);
+        setEditingName("");
+    }
+
+    async function handleRenameSubmit(fileId) {
+        const file = fileMap[fileId];
+        if (!file) {
+            handleRenameCancel();
+            return;
+        }
+
+        const newName = editingName.trim();
+
+        if (!newName || newName === file.name) {
+            handleRenameCancel();
+            return;
+        }
+
+        const siblingNames = getSiblingNames(fileId);
+        if (siblingNames.has(newName)) {
+            alert("같은 위치에 동일한 이름의 파일/폴더가 이미 존재합니다.");
+            handleRenameCancel();
+            return;
+        }
 
         try {
             const oldRelativePath = file.relative_path;
@@ -214,6 +334,7 @@ export default function Sidebar({ projectKey }) {
                 dispatch(renameFile({ fileId, newName }));
             }
 
+            handleRenameCancel();
         } catch (e) {
             alert(e.message);
         }
@@ -257,17 +378,19 @@ export default function Sidebar({ projectKey }) {
         const parent = parentId === "root" ? null : fileMap[parentId];
         const parentRelativePath = parent?.relative_path ?? "";
 
+        const siblingNames = getChildNamesOfParent(parentId);
+
         let base = "new_file";
         let ext = ".py";
         let index = 1;
         let fileName = `${base}${index}${ext}`;
-        let candidateRelativePath = joinRelativePath(parentRelativePath, fileName);
 
-        while (fileNames.has(candidateRelativePath)) {
+        while (siblingNames.has(fileName)) {
             index += 1;
             fileName = `${base}${index}${ext}`;
-            candidateRelativePath = joinRelativePath(parentRelativePath, fileName);
         }
+
+        const candidateRelativePath = joinRelativePath(parentRelativePath, fileName);
 
         try {
             await saveCodeApi({
@@ -300,16 +423,18 @@ export default function Sidebar({ projectKey }) {
         const parent = parentId === "root" ? null : fileMap[parentId];
         const parentRelativePath = parent?.relative_path ?? "";
 
+        const siblingNames = getChildNamesOfParent(parentId);
+
         let base = "new_folder";
         let index = 1;
         let folderName = `${base}${index}`;
-        let candidateRelativePath = joinRelativePath(parentRelativePath, folderName);
 
-        while (folderNames.has(candidateRelativePath)) {
+        while (siblingNames.has(folderName)) {
             index += 1;
             folderName = `${base}${index}`;
-            candidateRelativePath = joinRelativePath(parentRelativePath, folderName);
         }
+
+        const candidateRelativePath = joinRelativePath(parentRelativePath, folderName);
 
         try {
             await createFolderApi({
@@ -331,33 +456,6 @@ export default function Sidebar({ projectKey }) {
         } catch (e) {
             alert(e.message);
         }
-    }
-
-    function collectChildIds(node, targetId) {
-        if (node.id === targetId) {
-            const ids = [];
-
-            const walk = (n) => {
-                ids.push(n.id);
-                if (n.children) {
-                    for (const child of n.children) {
-                        walk(child);
-                    }
-                }
-            };
-
-            walk(node);
-            return ids;
-        }
-
-        if (!node.children) return [];
-
-        for (const child of node.children) {
-            const result = collectChildIds(child, targetId);
-            if (result.length > 0) return result;
-        }
-
-        return [];
     }
 
     return (
@@ -388,12 +486,16 @@ export default function Sidebar({ projectKey }) {
                     node={tree}
                     depth={0}
                     fileMap={fileMap}
-                    projectKey={projectKey}
                     onOpenFile={openPage}
-                    onRenameFile={handleRename}
+                    onRenameStart={handleRenameStart}
                     onDeleteFile={handleDelete}
                     onCreateFile={handleCreateFile}
                     onCreateFolder={handleCreateFolder}
+                    editingId={editingId}
+                    editingName={editingName}
+                    setEditingName={setEditingName}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameCancel={handleRenameCancel}
                 />
             </div>
         </div>
