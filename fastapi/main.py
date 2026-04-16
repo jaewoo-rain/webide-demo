@@ -97,7 +97,10 @@ async def run(req: RunRequest):
         exec_path = os.path.join(WORKSPACE, req.entryFile)
 
         # 3. 실행 전 기존 동일 프로세스 종료
-        await exec_run(pod_name, ["bash", "-c", f"pkill -f '{exec_path}' || true"])
+        await exec_run(
+            pod_name,
+            ["bash", "-c", f"pkill -f '{WORKSPACE}' || true"]
+        )
 
         # 4. 실행하기
         resp.write_stdin(f"/bin/python3 '{exec_path}'\n")
@@ -187,7 +190,7 @@ async def create_container(
 
     # vncUrl 찾기
     port = get_service_nodeport(v1, NAMESPACE, svc_name)
-    vncUrl = f"http://210.117.181.56:${port}/vnc.html?autoconnect=true&password=jaewoo"
+    vncUrl = f"http://210.117.181.56:{port}/vnc.html?autoconnect=true&password=jaewoo"
 
     # DB 저장하기
     obj = crud.create_project(db, {
@@ -253,11 +256,11 @@ async def delete_container(
 @app.get("/containers")
 def read_protected_data(
     db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user) # 테스트시 주석 처리
 ):
 
-    # projectList = crud.list_by_owner(db, current_user.username)
-    projectList = crud.list_by_owner(db, "jaewoo")
+    projectList = crud.list_by_owner(db, current_user.username) # 테스트시 주석 처리
+    # projectList = crud.list_by_owner(db, "jaewoo") # 테스트시 사용
 
     projectList = [
         {

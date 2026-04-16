@@ -1,4 +1,3 @@
-# http://210.117.181.56:30681/vnc.html 확인 가능
 import turtle as t
 import random
 
