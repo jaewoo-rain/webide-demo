@@ -93,7 +93,6 @@ async def run(req: RunRequest):
         )
         
         # 2. 실행할 파일 경로 찾기
-        # entryFile: "main.py" 또는 "src/main.py"
         exec_path = os.path.join(WORKSPACE, req.entryFile)
 
         # 3. 실행 전 기존 동일 프로세스 종료
@@ -274,11 +273,8 @@ def read_protected_data(
 
 
     return projectList
-# 이름 수정
 
-# 새로고침
-
-# 현재 파일 저장
+# 파일 생성 및 저장
 @app.post("/save", response_model=SaveFileResponse)
 async def save_file(req: SaveFileRequest):
 
@@ -429,7 +425,7 @@ async def load_project_files(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 파일 이름 변경
+# 파일/폴더 이름 변경
 @app.post("/rename")
 async def rename_file(req: RenameFileRequest):
     try:

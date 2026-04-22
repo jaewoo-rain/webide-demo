@@ -96,7 +96,7 @@ async def create_file(
 
 def _extract_file_info_from_item(item: Any) -> tuple[str, str]:
     """
-    배열 기반 files의 각 항목을 (relative_path, code) 형태로 통일한다.
+    배열 기반 files의 각 항목을 (relative_path, code) 형태
 
     지원 형태 예시:
     1) {"name": "main.py", "code": "..."}

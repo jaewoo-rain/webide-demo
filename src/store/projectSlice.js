@@ -163,7 +163,7 @@ const projectSlice = createSlice({
 
       const newBase = parts.join("/");
 
-      // 🔥 모든 하위 경로 변경
+      // 모든 하위 경로 변경
       for (const id in state.files) {
         const file = state.files[id];
 

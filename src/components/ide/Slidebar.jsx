@@ -173,7 +173,7 @@ function TreeNode({
                                 onRenameStart(node.id);
                             }}
                             className="text-gray-400 hover:text-white"
-                            title="이름 변경"
+                            title="파일 이름 변경"
                         >
                             <i className="ri-edit-line"></i>
                         </button>
