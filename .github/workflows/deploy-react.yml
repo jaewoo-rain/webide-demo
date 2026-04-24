@@ -89,6 +89,12 @@ jobs:
             git push
           fi
 
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          version: latest
+
       - name: Rollout on server
         uses: appleboy/ssh-action@v1.0.3
         env:
