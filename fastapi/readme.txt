@@ -16,6 +16,7 @@ kubectl rollout restart deployment/ide-fastapi -n webide-net
 삭제 확인 : 삭제되는데 오래 걸림
 kubectl get deploy,rs,pod,svc,pvc -n webide-net | grep novnc || echo "novnc 리소스 없음"
 
+서비스 변경
 
 
 ---
