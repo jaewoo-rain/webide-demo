@@ -1,0 +1,107 @@
+name: Deploy React
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'postcss.config.js'
+      - 'tailwind.config.js'
+      - 'eslint.config.js'
+      - 'nginx.conf'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-react.yml'
+
+concurrency:
+  group: deploy-react
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  IMAGE: jaewoo2/webide-react
+  NAMESPACE: webide-net
+  DEPLOYMENT: webide-react
+  CONTAINER: webide-react
+  YAML_PATH: fastapi/react.yaml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bump patch version
+        id: ver
+        run: |
+          CURRENT=$(grep -oE "${IMAGE}:[0-9]+\.[0-9]+\.[0-9]+" "$YAML_PATH" | head -1 | cut -d: -f2)
+          if [ -z "$CURRENT" ]; then
+            echo "::error::${YAML_PATH}에서 ${IMAGE}:X.Y.Z 태그를 찾지 못했습니다"
+            exit 1
+          fi
+          IFS=. read -r MAJ MIN PAT <<< "$CURRENT"
+          NEW="${MAJ}.${MIN}.$((PAT + 1))"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "::notice::$CURRENT -> $NEW"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.ver.outputs.new }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update yaml with new version
+        env:
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          sed -i "s|image: ${IMAGE}:.*|image: ${IMAGE}:${NEW}|" "$YAML_PATH"
+
+      - name: Commit version bump
+        env:
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet "$YAML_PATH"; then
+            git add "$YAML_PATH"
+            git commit -m "chore(deploy): webide-react ${NEW} [skip ci]"
+            git push
+          fi
+
+      - name: Rollout on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          TAG: ${{ steps.ver.outputs.new }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          envs: IMAGE,NAMESPACE,DEPLOYMENT,CONTAINER,TAG
+          script: |
+            kubectl set image deployment/${DEPLOYMENT} \
+              ${CONTAINER}=${IMAGE}:${TAG} \
+              -n ${NAMESPACE}
+            kubectl rollout status deployment/${DEPLOYMENT} \
+              -n ${NAMESPACE} --timeout=180s

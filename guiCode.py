@@ -48,6 +48,6 @@ rainbow_circle(60, 40)
 t.penup()
 t.goto(0, 180)
 t.color("white")
-t.write("HELLO TURTLE!", align="center", font=("Arial", 28, "bold"))
+t.write("HELLO JCOLAB!", align="center", font=("Arial", 28, "bold"))
 
 t.done()
