@@ -11,6 +11,7 @@ import { loadProjectFilesApi } from "../api/projectService";
 import { initProject, setProjectFiles } from "../store/projectSlice";
 import { openFile, resetOpenPages } from "../store/openPageSlice";
 
+// IDE
 export default function IdePage() {
   const [runMode, setRunMode] = useState("cli");
   const [isReady, setReady] = useState(false);
