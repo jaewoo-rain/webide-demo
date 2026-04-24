@@ -38,7 +38,6 @@ export default function LoginCard({
                     password,
                 });
 
-                console.log("회원가입 성공", result);
 
             } catch (error) {
                 console.error("회원가입 에러:", error);
