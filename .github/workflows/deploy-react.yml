@@ -21,15 +21,11 @@ concurrency:
   group: deploy-react
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 env:
   IMAGE: jaewoo2/webide-react
   NAMESPACE: webide-net
   DEPLOYMENT: webide-react
   CONTAINER: webide-react
-  YAML_PATH: fastapi/react.yaml
 
 jobs:
   deploy:
@@ -37,19 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bump patch version
-        id: ver
-        run: |
-          CURRENT=$(grep -oE "${IMAGE}:[0-9]+\.[0-9]+\.[0-9]+" "$YAML_PATH" | head -1 | cut -d: -f2)
-          if [ -z "$CURRENT" ]; then
-            echo "::error::${YAML_PATH}에서 ${IMAGE}:X.Y.Z 태그를 찾지 못했습니다"
-            exit 1
-          fi
-          IFS=. read -r MAJ MIN PAT <<< "$CURRENT"
-          NEW="${MAJ}.${MIN}.$((PAT + 1))"
-          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
-          echo "new=$NEW" >> "$GITHUB_OUTPUT"
-          echo "::notice::$CURRENT -> $NEW"
+      - name: Short SHA
+        id: sha
+        run: echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -66,28 +52,10 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE }}:${{ steps.ver.outputs.new }}
+            ${{ env.IMAGE }}:${{ steps.sha.outputs.value }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Update yaml with new version
-        env:
-          NEW: ${{ steps.ver.outputs.new }}
-        run: |
-          sed -i "s|image: ${IMAGE}:.*|image: ${IMAGE}:${NEW}|" "$YAML_PATH"
-
-      - name: Commit version bump
-        env:
-          NEW: ${{ steps.ver.outputs.new }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet "$YAML_PATH"; then
-            git add "$YAML_PATH"
-            git commit -m "chore(deploy): webide-react ${NEW} [skip ci]"
-            git push
-          fi
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
@@ -97,7 +65,7 @@ jobs:
       - name: Rollout on server
         uses: appleboy/ssh-action@v1.0.3
         env:
-          TAG: ${{ steps.ver.outputs.new }}
+          TAG: ${{ steps.sha.outputs.value }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
