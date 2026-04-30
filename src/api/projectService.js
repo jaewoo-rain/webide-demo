@@ -2,8 +2,6 @@ import axios from "axios";
 import config from "../config";
 
 export async function createProjectApi({ project_name, image = "jaewoo6257/vnc:1.0.0" }) {
-    // e.preventDefault();
-
     try {
         const res = await axios.post(
             `${config.fastapiUrl}/containers`,
@@ -15,25 +13,29 @@ export async function createProjectApi({ project_name, image = "jaewoo6257/vnc:1
             headers: { "Content-Type": "application/json" },
         }
         );
-        // const data = res.data
-        // console.log(
-        //     `pod_name:${data.pod_name}`,
-        //     `novnc_port:${data.novnc_port}`,
-        //     `namespace:${data.namespace}`,
-        //     `deploy_name:${data.deploy_name}`,
-        //     `svc_name:${data.svc_name}`,
-        //     `pvc_name:${data.pvc_name}"`
-        // )
         return res.data;
 
     } catch (e) {
         if (e.response) {
-            console.error("RUN failed:", e.response.status, e.response.data);
-            alert(`실행 실패 (${e.response.status})`);
-        } else {
-            console.error("Network/Error:", e.message);
-            alert(`네트워크 오류: ${e.message}`);
+            throw new Error(e.response.data?.detail || `프로젝트 생성 실패 (${e.response.status})`);
         }
+        throw new Error(`네트워크 오류: ${e.message}`);
+    }
+}
+
+// 프로젝트 컨테이너 ready 상태 확인 (폴링용)
+export async function getProjectReadyApi({ key }) {
+    try {
+        const res = await axios.get(
+            `${config.fastapiUrl}/containers/${encodeURIComponent(key)}/ready`,
+            { withCredentials: true }
+        );
+        return res.data; // { status: "ready" | "creating" | "error", ... }
+    } catch (e) {
+        if (e.response) {
+            throw new Error(e.response.data?.detail || `상태 조회 실패 (${e.response.status})`);
+        }
+        throw new Error(`네트워크 오류: ${e.message}`);
     }
 }
 

@@ -160,19 +160,21 @@ async def create_container(
 
 
     existed = crud.get_alive_by_key(db, key)
-    
+
     if existed:
         # existed여도 런타임 값은 다시 구해서 CreateContainerResponse로 반환
         novnc_port = create_service_nodeport(v1, NAMESPACE, svc_name, labels, ALLOWED_NOVNC_PORTS)
         pod_name = get_any_running_pod_name(v1, NAMESPACE, key)
 
         return CreateContainerResponse(
+            key=key,
             pod_name=pod_name,
             novnc_port=novnc_port,
             namespace=NAMESPACE,
             deploy_name=existed.deploy_name,
             svc_name=existed.svc_name,
             pvc_name=existed.pvc_name,
+            vncUrl=existed.vncUrl,
         )
 
     # 1. PVC 만들기
@@ -207,13 +209,68 @@ async def create_container(
     })
 
     return CreateContainerResponse(
+        key=key,
         pod_name=pod_name,
         novnc_port=novnc_port,
         namespace=NAMESPACE,
         deploy_name=obj.deploy_name,
         svc_name=obj.svc_name,
         pvc_name=obj.pvc_name,
+        vncUrl=vncUrl,
     )
+
+# Pod이 실제 사용 가능한 상태(Running + 모든 컨테이너 ready)인지 폴링용 엔드포인트
+@app.get("/containers/{key}/ready")
+def container_ready(
+    key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = crud.get_alive_by_key(db, key)
+    if not project:
+        raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
+
+    # 본인 소유 프로젝트만 조회 가능
+    if project.owner_slug != slug(current_user.username):
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+    v1 = client.CoreV1Api()
+    pods = v1.list_namespaced_pod(namespace=NAMESPACE, label_selector=f"key={key}")
+
+    if not pods.items:
+        # Deployment는 만들어졌지만 ReplicaSet이 아직 Pod를 안 띄운 짧은 구간
+        return {"status": "creating", "phase": "scheduling"}
+
+    pod = pods.items[0]
+    phase = pod.status.phase if pod.status else None
+
+    # 컨테이너 단계의 에러를 먼저 확인 (ImagePullBackOff 등)
+    container_statuses = (pod.status.container_statuses or []) if pod.status else []
+    for cs in container_statuses:
+        waiting = cs.state.waiting if cs.state else None
+        if waiting and waiting.reason in (
+            "ImagePullBackOff",
+            "ErrImagePull",
+            "CrashLoopBackOff",
+            "CreateContainerConfigError",
+            "InvalidImageName",
+        ):
+            return {
+                "status": "error",
+                "reason": waiting.reason,
+                "message": waiting.message or "",
+            }
+
+    if phase != "Running":
+        return {"status": "creating", "phase": phase or "Unknown"}
+
+    if not container_statuses:
+        return {"status": "creating", "phase": "Running"}
+
+    if all(cs.ready for cs in container_statuses):
+        return {"status": "ready"}
+
+    return {"status": "creating", "phase": "Running"}
 
 # 삭제
 @app.delete("/containers", response_model=DeleteContainerResponse)
