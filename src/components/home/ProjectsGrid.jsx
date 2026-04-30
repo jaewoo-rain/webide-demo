@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import EditProjectModal from "./EditProjectModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { deleteProjectApi, projectListApi } from "../../api/projectService";
-import { setProjects } from "../../store/listSlice";
 
 export default function ProjectsGrid() {
     const navigate = useNavigate();
     const projects = useSelector((state) => state.list.projects ?? []);
-    const dispatch = useDispatch();
 
     const [projectList, setProjectList] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
@@ -32,16 +29,6 @@ export default function ProjectsGrid() {
 
     const handleAskDelete = (project) => {
         setDeleteTarget(project);
-    };
-
-    const handleDelete = async (key) => {
-        await deleteProjectApi({ key });
-        console.log("delete project:", key);
-
-        const updatedProjectList = await projectListApi();
-        dispatch(setProjects(updatedProjectList));
-
-        setDeleteTarget(null);
     };
 
     const handleCloseModal = () => {
@@ -136,7 +123,6 @@ export default function ProjectsGrid() {
                     key={deleteTarget.key}
                     project={deleteTarget}
                     onClose={handleCloseDeleteModal}
-                    onConfirm={handleDelete}
                 />
             )}
         </>

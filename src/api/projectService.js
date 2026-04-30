@@ -41,8 +41,6 @@ export async function getProjectReadyApi({ key }) {
 
 // 프로젝트 삭제
 export async function deleteProjectApi({ key }) {
-    // e.preventDefault();
-
     try {
         const res = await axios.delete(
             `${config.fastapiUrl}/containers`,
@@ -55,12 +53,9 @@ export async function deleteProjectApi({ key }) {
 
     } catch (e) {
         if (e.response) {
-            console.error("RUN failed:", e.response.status, e.response.data);
-            alert(`실행 실패 (${e.response.status})`);
-        } else {
-            console.error("Network/Error:", e.message);
-            alert(`네트워크 오류: ${e.message}`);
+            throw new Error(e.response.data?.detail || `프로젝트 삭제 실패 (${e.response.status})`);
         }
+        throw new Error(`네트워크 오류: ${e.message}`);
     }
 }
 
