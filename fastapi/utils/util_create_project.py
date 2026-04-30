@@ -70,7 +70,7 @@ def create_deployment(apps: client.AppsV1Api, namespace: str, deploy_name: str, 
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name=VOLUME_NAME, # Pod 안에서 이 볼륨을 부르는 이름
-                                    mount_path=WORKSPACE_MOUNT_PATH,
+                                    mount_path=WORKSPACE,
                                 )
                             ],
                         )
