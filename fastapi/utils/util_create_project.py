@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
-from config import (INTERNAL_NOVNC_PORT, DEFAULT_STORAGE, WORKSPACE_MOUNT_PATH, VOLUME_NAME)
+from config import (INTERNAL_NOVNC_PORT, DEFAULT_STORAGE, WORKSPACE, VOLUME_NAME)
 
 """K8s 리소스 name/label에 안전한 문자열로 변환"""
 def slug(s: str, max_len: int = 50) -> str:
